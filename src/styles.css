@@ -1,0 +1,242 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #12121f;
+  --bg2: #1a1a2e;
+  --card: #23233a;
+  --card2: #2c2c46;
+  --border: #38385a;
+  --text: #eceaf5;
+  --muted: #9a97b8;
+  --accent: #7c6cf0;
+  --gruen: #4ade80;
+  --gelb: #facc15;
+  --rot: #f87171;
+  --radius: 14px;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  overscroll-behavior-y: none;
+}
+
+#root { max-width: 860px; margin: 0 auto; min-height: 100vh; padding-bottom: 90px; }
+
+a { color: inherit; text-decoration: none; }
+input, select, textarea, button { font: inherit; color: inherit; }
+
+/* ── Header ── */
+.header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg2);
+  padding: 14px 16px calc(12px);
+  padding-top: calc(14px + env(safe-area-inset-top));
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 19px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header .back {
+  background: var(--card); border: none; border-radius: 10px;
+  width: 38px; height: 38px; font-size: 20px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.page { padding: 16px; }
+
+/* ── Karten & Listen ── */
+.card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+.card.tappable { cursor: pointer; transition: background 0.12s; }
+.card.tappable:active { background: var(--card2); }
+
+.section-title {
+  font-size: 13px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 8px 2px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ── Ampel ── */
+.ampel { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.ampel.gruen { background: var(--gruen); box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+.ampel.gelb  { background: var(--gelb);  box-shadow: 0 0 8px rgba(250,204,21,0.5); }
+.ampel.rot   { background: var(--rot);   box-shadow: 0 0 8px rgba(248,113,113,0.6); }
+.ampel.lg { width: 20px; height: 20px; }
+
+/* ── Filialkacheln ── */
+.kachel-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 560px) { .kachel-grid { grid-template-columns: 1fr 1fr; } }
+
+.kachel {
+  background: var(--card); border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 14px 16px; cursor: pointer; transition: background 0.12s;
+}
+.kachel:active { background: var(--card2); }
+.kachel .top { display: flex; align-items: center; gap: 10px; }
+.kachel .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kachel .meta { color: var(--muted); font-size: 13.5px; margin-top: 6px; display: flex; gap: 14px; flex-wrap: wrap; }
+.kachel.rot  { border-left: 4px solid var(--rot); }
+.kachel.gelb { border-left: 4px solid var(--gelb); }
+.kachel.gruen{ border-left: 4px solid var(--gruen); }
+
+/* ── Heute-Leiste ── */
+.heute-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 14px; margin-bottom: 8px; cursor: pointer;
+}
+.heute-item:active { background: var(--card2); }
+.heute-item.ueberfaellig { border-left: 4px solid var(--rot); }
+.heute-item .text { flex: 1; min-width: 0; }
+.heute-item .text .titel { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heute-item .text .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.heute-item .datum { font-size: 12.5px; color: var(--muted); flex-shrink: 0; }
+.heute-item .datum.rot { color: var(--rot); font-weight: 600; }
+
+/* ── Badges & Chips ── */
+.badge {
+  font-size: 12px; padding: 3px 9px; border-radius: 99px;
+  background: var(--card2); color: var(--muted); white-space: nowrap;
+}
+.badge.rot { background: rgba(248,113,113,0.16); color: var(--rot); }
+.badge.gelb { background: rgba(250,204,21,0.14); color: var(--gelb); }
+.badge.gruen { background: rgba(74,222,128,0.14); color: var(--gruen); }
+.badge.accent { background: rgba(124,108,240,0.18); color: #b1a6ff; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 8px 14px; border-radius: 99px; border: 1px solid var(--border);
+  background: var(--card); cursor: pointer; font-size: 14px; user-select: none;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* ── Formulare ── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.field input, .field select, .field textarea {
+  width: 100%; background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 13px; font-size: 16px; outline: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 80px; }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ── Buttons ── */
+.btn {
+  display: block; width: 100%; padding: 13px; border: none; border-radius: 12px;
+  background: var(--accent); color: #fff; font-size: 16px; font-weight: 600;
+  cursor: pointer; text-align: center; margin-top: 8px;
+}
+.btn:active { opacity: 0.85; }
+.btn.secondary { background: var(--card); border: 1px solid var(--border); color: var(--text); }
+.btn.danger { background: transparent; border: 1px solid var(--rot); color: var(--rot); }
+.btn.small { width: auto; display: inline-block; padding: 8px 16px; font-size: 14px; margin-top: 0; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; right: 18px; bottom: calc(84px + env(safe-area-inset-bottom));
+  width: 58px; height: 58px; border-radius: 50%; border: none;
+  background: var(--accent); color: #fff; font-size: 30px; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(124,108,240,0.45); z-index: 30;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+
+/* ── Bottom-Nav ── */
+.bottomnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 25;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+  max-width: 860px; margin: 0 auto;
+}
+.bottomnav a {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--muted); font-size: 11px; padding: 4px 10px; border-radius: 10px; flex: 1; text-align: center;
+}
+.bottomnav a.active { color: var(--accent); font-weight: 600; }
+.bottomnav a .icon { font-size: 21px; }
+
+/* ── Tabs (Filialakte) ── */
+.tabs {
+  display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px;
+  position: sticky; top: 64px; background: var(--bg); z-index: 15;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tabs .tab {
+  padding: 8px 15px; border-radius: 99px; white-space: nowrap;
+  background: var(--card); border: 1px solid var(--border); cursor: pointer; font-size: 14px;
+}
+.tabs .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* ── Aufgaben-Liste ── */
+.aufgabe-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+}
+.aufgabe-item .check {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--muted);
+  background: transparent; cursor: pointer; flex-shrink: 0; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; color: transparent;
+}
+.aufgabe-item.erledigt .check { background: var(--gruen); border-color: var(--gruen); color: #12121f; }
+.aufgabe-item.erledigt .titel { text-decoration: line-through; color: var(--muted); }
+.aufgabe-item .body { flex: 1; min-width: 0; cursor: pointer; }
+.aufgabe-item .titel { font-size: 15.5px; }
+.aufgabe-item .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; align-items: center; }
+
+.prio-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.prio-hoch { background: var(--rot); }
+.prio-mittel { background: var(--gelb); }
+.prio-niedrig { background: var(--muted); }
+
+/* ── Mini-Chart ── */
+.minichart { display: block; }
+
+/* ── Suche ── */
+.search-input {
+  width: 100%; background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 14px; font-size: 16px; outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+
+/* ── PIN-Lock ── */
+.pinlock {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px; padding: 24px;
+}
+.pin-dots { display: flex; gap: 14px; }
+.pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); }
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-pad button {
+  height: 72px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--card); font-size: 24px; cursor: pointer;
+}
+.pin-pad button:active { background: var(--card2); }
+
+/* ── Leerer Zustand ── */
+.empty { text-align: center; color: var(--muted); padding: 34px 20px; font-size: 15px; }
+.empty .big { font-size: 40px; margin-bottom: 10px; }
+
+/* ── Historie ── */
+.hist-item { display: flex; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+.hist-item .datum { color: var(--muted); flex-shrink: 0; font-size: 13px; padding-top: 2px; min-width: 74px; }
+
+/* ── Tabellen (Bezirksvergleich) ── */
+.table-wrap { overflow-x: auto; }
+table.vergleich { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.vergleich th, table.vergleich td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.vergleich th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+td.best { color: var(--gruen); font-weight: 700; }
+td.worst { color: var(--rot); font-weight: 700; }
