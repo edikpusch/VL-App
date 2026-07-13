@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { ABSCHRIFT_BEREICHE, uid, isoWeek } from '../store.js'
+import { ABSCHRIFT_BEREICHE, uid, isoWeek, normNum } from '../store.js'
 
 // Schnell-Eingabe Abschriftenreport: KW wählen → je Bereich % + VJ %.
 // Vorwoche wird automatisch aus der vorherigen KW angezeigt.
@@ -49,12 +49,12 @@ export default function AbschriftenEingabe() {
     return m
   }, [data, filialeId, jahr, kw])
 
-  const set = (b, key, val) => setWerte({ ...werte, [b]: { ...werte[b], [key]: val.replace(',', '.') } })
+  const set = (b, key, val) => setWerte({ ...werte, [b]: { ...werte[b], [key]: normNum(val) } })
 
   const addFlop = () => setFlops([...flops, { id: uid(), bereich: ABSCHRIFT_BEREICHE[0], artikel: '', verlustEuro: '' }])
   const setFlop = (i, key, val) => {
     const f = [...flops]
-    f[i] = { ...f[i], [key]: key === 'verlustEuro' ? val.replace(',', '.') : val }
+    f[i] = { ...f[i], [key]: key === 'verlustEuro' ? normNum(val) : val }
     setFlops(f)
   }
 

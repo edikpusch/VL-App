@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { uid, currentMonth, fmtMonat, num, fmtEuro, fmtProzent, abwEuro } from '../store.js'
+import { uid, currentMonth, fmtMonat, num, normNum, fmtEuro, fmtPP, abwEuro } from '../store.js'
 import { Header, Empty } from '../components/Ui.jsx'
 
 // Personalkosten pro Monat, alle Filialen: Plan/Ist in € und %, Abweichung auto.
@@ -20,7 +20,7 @@ export default function PersonalkostenEingabe() {
     return w
   }
   const wechsle = (m) => { setMonat(m); setWerte(init(data, m)) }
-  const set = (fid, key, val) => setWerte({ ...werte, [fid]: { ...werte[fid], [key]: val.replace(',', '.') } })
+  const set = (fid, key, val) => setWerte({ ...werte, [fid]: { ...werte[fid], [key]: normNum(val) } })
 
   const speichern = () => {
     update((d) => {
@@ -76,7 +76,7 @@ export default function PersonalkostenEingabe() {
               </div>
               {(!isNaN(abwE) || !isNaN(abwP)) && (
                 <div style={{ marginTop: 9, fontSize: 13.5, color: (abwE > 0 || abwP > 0) ? 'var(--rot)' : 'var(--gruen)' }}>
-                  Abweichung zu Plan: {isNaN(abwE) ? '–' : fmtEuro(abwE)} · {isNaN(abwP) ? '–' : fmtProzent(abwP)} pp
+                  Abweichung zu Plan: {isNaN(abwE) ? '–' : fmtEuro(abwE)} · {isNaN(abwP) ? '–' : fmtPP(abwP)}
                 </div>
               )}
             </div>

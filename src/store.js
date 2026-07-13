@@ -144,9 +144,18 @@ export function isoWeek(d = new Date()) {
 
 // ─── Zahlen-Helfer (Komma↔Punkt, Formatierung, Abweichungen) ─────────
 
+// Deutsche Eingabe → kanonisch: gruppierte Tausenderpunkte entfernen, Komma→Punkt.
+// "312.000" → "312000", "1.234,56" → "1234.56", "8,5" → "8.5", "8.5" bleibt "8.5".
+export function normNum(s) {
+  if (s == null) return ''
+  let x = String(s).trim()
+  if (/^-?\d{1,3}(\.\d{3})+(,\d*)?$/.test(x)) x = x.replace(/\./g, '')
+  return x.replace(',', '.')
+}
+
 export function num(v) {
   if (v === '' || v == null) return NaN
-  return parseFloat(String(v).replace(',', '.'))
+  return parseFloat(normNum(v))
 }
 
 // Anzeige: deutsche Zahl (Punkt→Komma), optional Nachkommastellen
@@ -164,6 +173,13 @@ export function fmtProzent(v, dec = 1) {
   const n = num(v)
   if (isNaN(n)) return '–'
   return (n > 0 ? '+' : '') + n.toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' %'
+}
+
+// Prozentpunkte-Differenz (z. B. Ist% − Plan%): mit Vorzeichen, ohne %-Zeichen
+export function fmtPP(v, dec = 1) {
+  const n = num(v)
+  if (isNaN(n)) return '–'
+  return (n > 0 ? '+' : '') + n.toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' pp'
 }
 
 export function abwEuro(ist, ref) {

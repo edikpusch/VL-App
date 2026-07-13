@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { uid, todayISO, BEREICHE, addHistorie } from '../store.js'
+import { uid, todayISO, BEREICHE, addHistorie, normNum } from '../store.js'
 import { Header } from '../components/Ui.jsx'
 
 export default function InventurEdit() {
@@ -96,21 +96,21 @@ export default function InventurEdit() {
         <div className="row2">
           <div className="field">
             <label>Differenz €</label>
-            <input value={inv.diffEuro} onChange={(e) => set('diffEuro', e.target.value.replace(',', '.'))} inputMode="decimal" placeholder="z. B. 1250" />
+            <input value={inv.diffEuro} onChange={(e) => set('diffEuro', normNum(e.target.value))} inputMode="decimal" placeholder="z. B. 1250" />
           </div>
           <div className="field">
             <label>Differenz %</label>
-            <input value={inv.diffProzent} onChange={(e) => set('diffProzent', e.target.value.replace(',', '.'))} inputMode="decimal" placeholder="z. B. 0,9" />
+            <input value={inv.diffProzent} onChange={(e) => set('diffProzent', normNum(e.target.value))} inputMode="decimal" placeholder="z. B. 0,9" />
           </div>
         </div>
         <div className="row2">
           <div className="field">
             <label>Vorjahr €</label>
-            <input value={inv.vjEuro} onChange={(e) => set('vjEuro', e.target.value.replace(',', '.'))} inputMode="decimal" />
+            <input value={inv.vjEuro} onChange={(e) => set('vjEuro', normNum(e.target.value))} inputMode="decimal" />
           </div>
           <div className="field">
             <label>Vorjahr %</label>
-            <input value={inv.vjProzent} onChange={(e) => set('vjProzent', e.target.value.replace(',', '.'))} inputMode="decimal" />
+            <input value={inv.vjProzent} onChange={(e) => set('vjProzent', normNum(e.target.value))} inputMode="decimal" />
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { letzterWochenbericht } from '../ampel.js'
-import { num, fmtNum, fmtProzent, currentMonth, fmtMonat } from '../store.js'
+import { num, fmtNum, fmtProzent, fmtPP, currentMonth, fmtMonat } from '../store.js'
 import { Header, Empty } from '../components/Ui.jsx'
 
 export default function Kennzahlen() {
@@ -79,7 +79,7 @@ export default function Kennzahlen() {
                         <td>{f.name}</td>
                         <td>{pk ? fmtNum(pk.planProzent) : '–'}</td>
                         <td>{pk ? fmtNum(pk.istProzent) : '–'}</td>
-                        <td className={cls(abw, true)}>{isNaN(abw) ? '–' : fmtProzent(abw)}</td>
+                        <td className={cls(abw, true)}>{isNaN(abw) ? '–' : fmtPP(abw)}</td>
                       </tr>
                     )
                   })}

@@ -12,12 +12,9 @@ export default function Besuchsmodus() {
   const nav = useNavigate()
   const [data, update] = useData()
   const filiale = data.filialen.find((f) => f.id === id)
-  if (!filiale) return <Header title="Filiale nicht gefunden" backTo="/" />
 
-  const ampel = computeAmpel(data, id)
+  // Hooks müssen VOR jedem bedingten return stehen (React-Regel)
   const abschriften = useMemo(() => abschriftenBewertung(data, id), [data, id])
-  const kritisch = abschriften.filter((a) => a.farbe !== 'gruen')
-  const gruen = abschriften.filter((a) => a.farbe === 'gruen')
 
   // Inventurdifferenz: letzte je Bereich
   const invLetzte = useMemo(() => {
@@ -31,6 +28,12 @@ export default function Besuchsmodus() {
   const wb = useMemo(() => letzterWochenbericht(data, id), [data, id])
   const pk = useMemo(() => (data.personalkosten || []).filter((p) => p.filialeId === id).sort((a, b) => b.monat.localeCompare(a.monat))[0], [data, id])
   const ts = useMemo(() => letzteTsInventur(data, id), [data, id])
+
+  if (!filiale) return <Header title="Filiale nicht gefunden" backTo="/" />
+
+  const ampel = computeAmpel(data, id)
+  const kritisch = abschriften.filter((a) => a.farbe !== 'gruen')
+  const gruen = abschriften.filter((a) => a.farbe === 'gruen')
 
   const offen = data.aufgaben.filter((a) => a.filialeId === id && a.status === 'offen')
     .sort((a, b) => (a.faelligkeit || '9999').localeCompare(b.faelligkeit || '9999'))

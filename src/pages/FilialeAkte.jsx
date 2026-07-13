@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { computeAmpel, abschriftenBewertung, letzterWochenbericht } from '../ampel.js'
-import { BEREICHE, daysUntil, fmtDate, fmtMonat, addHistorie, todayISO, uid, num, fmtNum, fmtEuro, fmtProzent, abwEuro } from '../store.js'
+import { BEREICHE, daysUntil, fmtDate, fmtMonat, addHistorie, todayISO, uid, num, fmtNum, fmtEuro, fmtProzent, fmtPP, abwEuro } from '../store.js'
 import { Header, Ampel, Empty, MiniChart } from '../components/Ui.jsx'
 
 const TABS = [
@@ -370,7 +370,7 @@ function TabKennzahlen({ data, filiale, nav }) {
           <div className="card">
             <Wert label="Plan" wert={fmtEuro(pk.planEuro) + ' · ' + fmtNum(pk.planProzent) + ' %'} />
             <Wert label="Ist" wert={fmtEuro(pk.istEuro) + ' · ' + fmtNum(pk.istProzent) + ' %'} />
-            <Wert label="Abw. zu Plan" wert={fmtEuro(abwEuro(pk.istEuro, pk.planEuro)) + ' · ' + fmtProzent(num(pk.istProzent) - num(pk.planProzent)) + ' pp'}
+            <Wert label="Abw. zu Plan" wert={fmtEuro(abwEuro(pk.istEuro, pk.planEuro)) + ' · ' + fmtPP(num(pk.istProzent) - num(pk.planProzent))}
               farbe={num(pk.istProzent) > num(pk.planProzent) ? 'var(--rot)' : 'var(--gruen)'} />
           </div>
         </>

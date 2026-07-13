@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { uid, todayISO, addHistorie } from '../store.js'
+import { uid, todayISO, addHistorie, normNum } from '../store.js'
 import { Header } from '../components/Ui.jsx'
 
 // TS-Inventur: Gesamtverlust + die 5 schwächsten Bereiche (Freitext).
@@ -34,7 +34,7 @@ export default function TsInventurEdit() {
   const set = (key, val) => setT({ ...t, [key]: val })
   const setB = (i, key, val) => {
     const bs = t.bereiche.map((b) => ({ ...b }))
-    bs[i][key] = key === 'name' ? val : val.replace(',', '.')
+    bs[i][key] = key === 'name' ? val : normNum(val)
     setT({ ...t, bereiche: bs })
   }
 
@@ -74,11 +74,11 @@ export default function TsInventurEdit() {
         <div className="row2">
           <div className="field">
             <label>Gesamtverlust (€)</label>
-            <input inputMode="decimal" value={String(t.gesamtVerlustEuro ?? '').replace('.', ',')} onChange={(e) => set('gesamtVerlustEuro', e.target.value.replace(',', '.'))} />
+            <input inputMode="decimal" value={String(t.gesamtVerlustEuro ?? '').replace('.', ',')} onChange={(e) => set('gesamtVerlustEuro', normNum(e.target.value))} />
           </div>
           <div className="field">
             <label>Gesamtverlust (%)</label>
-            <input inputMode="decimal" value={String(t.gesamtVerlustProzent ?? '').replace('.', ',')} onChange={(e) => set('gesamtVerlustProzent', e.target.value.replace(',', '.'))} />
+            <input inputMode="decimal" value={String(t.gesamtVerlustProzent ?? '').replace('.', ',')} onChange={(e) => set('gesamtVerlustProzent', normNum(e.target.value))} />
           </div>
         </div>
 

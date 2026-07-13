@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { uid, isoWeek, num, abwEuro, abwProzent, anteilProzent } from '../store.js'
+import { uid, isoWeek, num, normNum, abwEuro, abwProzent, anteilProzent } from '../store.js'
 
 const BASE = ['umsatzVj', 'umsatzPlan', 'umsatzIst', 'ogVj', 'ogIst', 'sbVj', 'sbIst', 'boUmsatz', 'boVj', 'stundenIst', 'stundenSoll', 'kunden', 'payback', 'kassierIst', 'kassierVj']
 const DERIV = ['umsatzAbwPlanE', 'umsatzAbwPlanP', 'umsatzAbwVjE', 'umsatzAbwVjP', 'ogAbwVjE', 'ogAbwVjP', 'ogAnteil', 'sbAbwVjE', 'sbAbwVjP', 'sbAnteil', 'boAbwVjP', 'boAnteil', 'stundenDiff', 'kassierAbw', 'kassierAbwP']
@@ -52,8 +52,8 @@ export default function WochenberichtFlow() {
   }
   const neuLaden = (fid, j, k) => { setManual(new Set()); setB(load(data, fid, j, k)) }
 
-  const setBase = (key, val) => setB(recompute({ ...b, [key]: val.replace(',', '.') }, manual))
-  const setDeriv = (key, val) => { const m = new Set(manual); m.add(key); setManual(m); setB({ ...b, [key]: val.replace(',', '.') }) }
+  const setBase = (key, val) => setB(recompute({ ...b, [key]: normNum(val) }, manual))
+  const setDeriv = (key, val) => { const m = new Set(manual); m.add(key); setManual(m); setB({ ...b, [key]: normNum(val) }) }
   const resetDeriv = (key) => { const m = new Set(manual); m.delete(key); setManual(m); setB(recompute(b, m)) }
 
   const speichern = () => {

@@ -40,7 +40,7 @@ src/
 ```
 
 ## Kennzahlen-Architektur (mehrere Report-Typen)
-- store.js Zahlen-Helfer: `num()` (Komma→Punkt), `fmtNum/fmtEuro/fmtProzent`, `abwEuro/abwProzent/anteilProzent`.
+- store.js Zahlen-Helfer: `normNum()` (entfernt deutsche Tausenderpunkte "312.000"→312000, Komma→Punkt — IMMER für Zahleneingaben verwenden!), `num()`, `fmtNum/fmtEuro/fmtProzent/fmtPP`, `abwEuro/abwProzent/anteilProzent`.
 - `wochenberichte` (wöchentlich, pro KW): Gesamtumsatz (VJ/Plan/Ist + Abw. zu Plan UND VJ), O&G/SB (VJ/Ist/Abw./Anteil), Bake-Off (Umsatz/Wo./Abw.VJ%/Anteil), Stunden (Ist/Soll/Diff), Kunden, Payback, **Kassierstatistik** (kassierIst/kassierVj Pos./Min + Abw.). Alle Derivate gespeichert; Wizard rechnet auto, `manual`-Set schützt überschriebene Felder bei Basisänderung.
 - `personalkosten` (monatlich): planEuro/planProzent/istEuro/istProzent; Abw. berechnet.
 - `tsInventuren` (monatlich): gesamtVerlust €+%, bereiche[] (Freitext-Name + diff €/% + kum €/%). Namen bezirksweit durchsuchbar (Bezirk-Suche) + datalist-Autovervollständigung.
