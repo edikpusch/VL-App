@@ -2,9 +2,62 @@
 // Regel: schlechtester Einzelwert bestimmt die Gesamtampel.
 // Rückgabe: { farbe: 'gruen'|'gelb'|'rot', gruende: [{farbe, text}] }
 
-import { daysUntil, zieleFuer, currentMonth } from './store.js'
+import { daysUntil, zieleFuer, currentMonth, num, fmtNum } from './store.js'
 
 const RANG = { gruen: 0, gelb: 1, rot: 2 }
+
+// ─── Abschriften-Bewertung je Bereich (vs Vorjahr UND Vorwoche) ──────
+// Höhere % = schlechter. Rot: schlechter als beide Referenzen oder Spitze;
+// Gelb: schlechter als eine; sonst Grün.
+export function abschriftenBewertung(data, filialeId) {
+  const byBereich = {}
+  for (const a of data.abschriften || []) {
+    if (a.filialeId !== filialeId) continue
+    ;(byBereich[a.bereich] ||= []).push(a)
+  }
+  const res = []
+  for (const [bereich, arr] of Object.entries(byBereich)) {
+    arr.sort((x, y) => (y.jahr - x.jahr) || (y.kw - x.kw)) // neueste zuerst
+    const cur = arr[0]
+    const p = parseFloat(cur.prozent)
+    if (isNaN(p)) continue
+    const vj = parseFloat(cur.vjProzent)
+    const vw = arr[1] ? parseFloat(arr[1].prozent) : NaN
+    const refs = []
+    if (!isNaN(vj)) refs.push({ label: 'VJ', wert: vj })
+    if (!isNaN(vw)) refs.push({ label: 'VW', wert: vw })
+    const worse = refs.filter((r) => p > r.wert + 0.1)
+    // Sprung nur kritisch, wenn nicht klar unter Vorjahr
+    const spike = refs.some((r) => r.wert > 0.3 && p >= r.wert * 2) && (isNaN(vj) || p > vj)
+    let farbe = 'gruen'
+    if (spike || (worse.length === refs.length && refs.length >= 2)) farbe = 'rot'
+    else if (worse.length >= 1) farbe = 'gelb'
+    res.push({
+      bereich, kw: cur.kw, jahr: cur.jahr, prozent: p, vjProzent: vj, vorwoche: vw, farbe,
+      verlauf: arr.slice(0, 6).reverse().map((x) => parseFloat(x.prozent)),
+    })
+  }
+  return res.sort((a, b) => RANG[b.farbe] - RANG[a.farbe] || b.prozent - a.prozent)
+}
+
+export function letzterWochenbericht(data, filialeId) {
+  return (data.wochenberichte || [])
+    .filter((w) => w.filialeId === filialeId)
+    .sort((a, b) => (b.jahr - a.jahr) || (b.kw - a.kw))[0] || null
+}
+
+export function letzteTsInventur(data, filialeId) {
+  return (data.tsInventuren || [])
+    .filter((t) => t.filialeId === filialeId)
+    .sort((a, b) => (b.datum || '').localeCompare(a.datum || ''))[0] || null
+}
+
+function refText(b) {
+  const t = []
+  if (!isNaN(b.vjProzent)) t.push('VJ ' + String(b.vjProzent).replace('.', ','))
+  if (!isNaN(b.vorwoche)) t.push('VW ' + String(b.vorwoche).replace('.', ','))
+  return t.length ? ' (' + t.join(', ') + ')' : ''
+}
 
 export function computeAmpel(data, filialeId) {
   const gruende = []
@@ -37,21 +90,37 @@ export function computeAmpel(data, filialeId) {
     else if (wert > ziel) gruende.push({ farbe: 'gelb', text: bereich + '-Differenz ' + String(wert).replace('.', ',') + ' % (Ziel ' + String(ziel).replace('.', ',') + ' %)' })
   }
 
-  // 3+4) Kennzahlen — letzter erfasster Monat
-  const kz = data.kennzahlen
-    .filter((k) => k.filialeId === filialeId && k.monat <= currentMonth())
+  // 3) Personalkosten Ist % vs Plan % — letzter Monat
+  const pkE = (data.personalkosten || [])
+    .filter((p) => p.filialeId === filialeId && p.monat <= currentMonth())
     .sort((a, b) => b.monat.localeCompare(a.monat))[0]
-  if (kz) {
-    const kl = parseFloat(kz.kassierleistung)
-    if (!isNaN(kl) && ziele.kassierleistung) {
-      if (kl < ziele.kassierleistung * 0.9) gruende.push({ farbe: 'rot', text: 'Kassierleistung ' + String(kl).replace('.', ',') + ' (Ziel ' + ziele.kassierleistung + ')' })
-      else if (kl < ziele.kassierleistung) gruende.push({ farbe: 'gelb', text: 'Kassierleistung ' + String(kl).replace('.', ',') + ' (Ziel ' + ziele.kassierleistung + ')' })
+  if (pkE) {
+    const ist = num(pkE.istProzent), plan = num(pkE.planProzent)
+    if (!isNaN(ist) && !isNaN(plan)) {
+      if (ist > plan + 0.3) gruende.push({ farbe: 'rot', text: 'Personalkosten ' + fmtNum(ist) + ' % (Plan ' + fmtNum(plan) + ' %)' })
+      else if (ist > plan) gruende.push({ farbe: 'gelb', text: 'Personalkosten ' + fmtNum(ist) + ' % (Plan ' + fmtNum(plan) + ' %)' })
     }
-    const pk = parseFloat(kz.personalkosten)
-    if (!isNaN(pk) && ziele.personalkosten) {
-      if (pk > ziele.personalkosten + 0.3) gruende.push({ farbe: 'rot', text: 'Personalkosten ' + String(pk).replace('.', ',') + ' % (Ziel ' + String(ziele.personalkosten).replace('.', ',') + ' %)' })
-      else if (pk > ziele.personalkosten) gruende.push({ farbe: 'gelb', text: 'Personalkosten ' + String(pk).replace('.', ',') + ' % (Ziel ' + String(ziele.personalkosten).replace('.', ',') + ' %)' })
+  }
+
+  // 4) Wochenbericht — letzte KW: Kassierleistung vs VJ, Umsatz vs Plan
+  const wb = letzterWochenbericht(data, filialeId)
+  if (wb) {
+    const kIst = num(wb.kassierIst), kVj = num(wb.kassierVj)
+    if (!isNaN(kIst) && !isNaN(kVj)) {
+      if (kIst < kVj * 0.9) gruende.push({ farbe: 'rot', text: 'Kassierleistung ' + fmtNum(kIst) + ' Pos./Min (VJ ' + fmtNum(kVj) + ')' })
+      else if (kIst < kVj) gruende.push({ farbe: 'gelb', text: 'Kassierleistung ' + fmtNum(kIst) + ' Pos./Min (VJ ' + fmtNum(kVj) + ')' })
     }
+    const uIst = num(wb.umsatzIst), uPlan = num(wb.umsatzPlan)
+    if (!isNaN(uIst) && !isNaN(uPlan)) {
+      if (uIst < uPlan * 0.95) gruende.push({ farbe: 'rot', text: 'Umsatz unter Plan (KW ' + wb.kw + ')' })
+      else if (uIst < uPlan) gruende.push({ farbe: 'gelb', text: 'Umsatz leicht unter Plan (KW ' + wb.kw + ')' })
+    }
+  }
+
+  // 4b) Abschriften je Bereich (vs VJ + Vorwoche)
+  for (const b of abschriftenBewertung(data, filialeId)) {
+    if (b.farbe === 'gruen') continue
+    gruende.push({ farbe: b.farbe, text: b.bereich + '-Abschrift ' + String(b.prozent).replace('.', ',') + ' %' + refText(b) })
   }
 
   // 5) Befristungen ohne Entscheidung

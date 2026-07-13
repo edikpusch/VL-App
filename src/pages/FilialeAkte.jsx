@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { computeAmpel } from '../ampel.js'
-import { BEREICHE, daysUntil, fmtDate, fmtMonat, addHistorie, todayISO, uid } from '../store.js'
+import { computeAmpel, abschriftenBewertung, letzterWochenbericht } from '../ampel.js'
+import { BEREICHE, daysUntil, fmtDate, fmtMonat, addHistorie, todayISO, uid, num, fmtNum, fmtEuro, fmtProzent, abwEuro } from '../store.js'
 import { Header, Ampel, Empty, MiniChart } from '../components/Ui.jsx'
 
 const TABS = [
   ['info', 'Info'],
+  ['abschriften', 'Abschriften'],
   ['aufgaben', 'Aufgaben'],
   ['inventuren', 'Inventuren'],
   ['kennzahlen', 'Kennzahlen'],
@@ -63,8 +64,15 @@ export default function FilialeAkte() {
         ))}
       </div>
 
+      {tab === 'info' && (
+        <div className="page" style={{ paddingTop: 6, paddingBottom: 0 }}>
+          <button className="btn" onClick={() => nav('/filiale/' + id + '/besuch')}>▶ Besuchsmodus starten</button>
+        </div>
+      )}
+
       <div className="page" style={{ paddingTop: 6 }}>
         {tab === 'info' && <TabInfo filiale={filiale} nav={nav} />}
+        {tab === 'abschriften' && <TabAbschriften data={data} filiale={filiale} nav={nav} />}
         {tab === 'aufgaben' && <TabAufgaben data={data} update={update} filiale={filiale} nav={nav} />}
         {tab === 'inventuren' && <TabInventuren data={data} filiale={filiale} nav={nav} />}
         {tab === 'kennzahlen' && <TabKennzahlen data={data} filiale={filiale} nav={nav} />}
@@ -109,6 +117,32 @@ function TabInfo({ filiale, nav }) {
       </div>
 
       <button className="btn secondary" onClick={() => nav('/filiale/' + filiale.id + '/edit')}>✏️ Filiale bearbeiten</button>
+    </>
+  )
+}
+
+// ── Abschriften ──
+function TabAbschriften({ data, filiale, nav }) {
+  const bewertung = abschriftenBewertung(data, filiale.id)
+  const farbHex = { rot: 'var(--rot)', gelb: 'var(--gelb)', gruen: 'var(--gruen)' }
+  return (
+    <>
+      {bewertung.length === 0 && <Empty icon="📉" text="Noch keine Abschriften erfasst." />}
+      {bewertung.map((b) => (
+        <div key={b.bereich} className="card" style={{ borderLeft: '4px solid ' + farbHex[b.farbe] }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontWeight: 600, flex: 1 }}>{b.bereich}</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: farbHex[b.farbe] }}>{String(b.prozent).replace('.', ',')}%</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 13, color: 'var(--muted)', alignItems: 'center' }}>
+            {!isNaN(b.vjProzent) && <span>VJ {String(b.vjProzent).replace('.', ',')}{b.prozent > b.vjProzent ? ' ▲' : ' ▼'}</span>}
+            {!isNaN(b.vorwoche) && <span>VW {String(b.vorwoche).replace('.', ',')}{b.prozent > b.vorwoche ? ' ▲' : ' ▼'}</span>}
+            <span style={{ marginLeft: 'auto' }}>KW {b.kw}</span>
+            {b.verlauf.length >= 2 && <MiniChart werte={b.verlauf} farbe="auto" invertiert breite={90} hoehe={26} />}
+          </div>
+        </div>
+      ))}
+      <button className="btn" onClick={() => nav('/abschriften/eingabe?filiale=' + filiale.id)}>Abschriften eingeben</button>
     </>
   )
 }
@@ -201,11 +235,38 @@ function TabInventuren({ data, filiale, nav }) {
     verlauf[b] = invs.filter((i) => i.bereich === b).slice(0, 6).reverse().map((i) => Math.abs(parseFloat(i.diffProzent)))
   }
 
+  const tsInvs = (data.tsInventuren || [])
+    .filter((t) => t.filialeId === filiale.id)
+    .sort((a, b) => (b.datum || '').localeCompare(a.datum || ''))
+  const tsLetzte = tsInvs[0]
+
   return (
     <>
+      <div className="section-title">
+        <span>TS-Inventur</span>
+        <button className="btn small secondary" onClick={() => nav('/ts-inventur/neu?filiale=' + filiale.id)}>+ Neu</button>
+      </div>
+      {!tsLetzte && <div className="card" style={{ color: 'var(--muted)', fontSize: 14 }}>Noch keine TS-Inventur erfasst.</div>}
+      {tsLetzte && (
+        <div className="card tappable" onClick={() => nav('/ts-inventur/' + tsLetzte.id)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontWeight: 600, flex: 1 }}>Gesamtverlust</span>
+            <span style={{ fontWeight: 700, color: 'var(--rot)' }}>{fmtEuro(tsLetzte.gesamtVerlustEuro)} · {fmtNum(tsLetzte.gesamtVerlustProzent)} %</span>
+            <span className="badge">{fmtDate(tsLetzte.datum)}</span>
+          </div>
+          {(tsLetzte.bereiche || []).filter((b) => b.name).slice(0, 5).map((b, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, padding: '2px 0' }}>
+              <span>{b.name}</span>
+              <span>{fmtEuro(b.diffEuro)} · {fmtNum(b.diffProzent)} %{b.kumProzent !== '' && b.kumProzent != null ? '  (kum. ' + fmtNum(b.kumProzent) + ' %)' : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="section-title">Inventurdifferenz je Bereich</div>
       {BEREICHE.some((b) => verlauf[b].length >= 2) && (
         <>
-          <div className="section-title">Verlauf (Differenz %)</div>
+          <div className="section-title" style={{ marginTop: 4 }}>Verlauf (Differenz %)</div>
           <div className="card">
             {BEREICHE.filter((b) => verlauf[b].length >= 2).map((b) => (
               <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '5px 0' }}>
@@ -246,43 +307,79 @@ function TabInventuren({ data, filiale, nav }) {
   )
 }
 
-// ── Kennzahlen ──
+// ── Kennzahlen (Wochenbericht + Personalkosten) ──
 function TabKennzahlen({ data, filiale, nav }) {
-  const kz = data.kennzahlen
-    .filter((k) => k.filialeId === filiale.id)
-    .sort((a, b) => a.monat.localeCompare(b.monat))
-  const letzte12 = kz.slice(-12)
+  const wb = letzterWochenbericht(data, filiale.id)
+  const pk = (data.personalkosten || [])
+    .filter((p) => p.filialeId === filiale.id)
+    .sort((a, b) => b.monat.localeCompare(a.monat))[0]
+  const kassierVerlauf = (data.wochenberichte || [])
+    .filter((w) => w.filialeId === filiale.id)
+    .sort((a, b) => (a.jahr - b.jahr) || (a.kw - b.kw))
+    .slice(-12).map((w) => w.kassierIst)
+
+  const Wert = ({ label, wert, farbe }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 14.5 }}>
+      <span style={{ color: 'var(--muted)' }}>{label}</span>
+      <span style={{ fontWeight: 600, color: farbe }}>{wert}</span>
+    </div>
+  )
+  const pos = (v) => num(v) > 0
+  const neg = (v) => num(v) < 0
 
   return (
     <>
-      {kz.length === 0 && <Empty icon="📊" text="Noch keine Kennzahlen. Eingabe über den Kennzahlen-Reiter unten." />}
-      {kz.length > 0 && (
+      {!wb && !pk && <Empty icon="📊" text="Noch keine Kennzahlen erfasst." />}
+
+      {wb && (
         <>
+          <div className="section-title">Wochenbericht KW {wb.kw}</div>
           <div className="card">
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Kassierleistung (Art./Min)</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <MiniChart werte={letzte12.map((k) => k.kassierleistung)} farbe="auto" breite={200} hoehe={46} />
-              <span style={{ fontSize: 22, fontWeight: 700 }}>{String(letzte12[letzte12.length - 1].kassierleistung ?? '–').replace('.', ',')}</span>
-            </div>
+            <Wert label="Umsatz Ist" wert={fmtEuro(wb.umsatzIst)} />
+            <Wert label="Abw. zu Plan" wert={fmtEuro(wb.umsatzAbwPlanE) + ' · ' + fmtProzent(wb.umsatzAbwPlanP)} farbe={neg(wb.umsatzAbwPlanP) ? 'var(--rot)' : pos(wb.umsatzAbwPlanP) ? 'var(--gruen)' : undefined} />
+            <Wert label="Abw. zu VJ" wert={fmtEuro(wb.umsatzAbwVjE) + ' · ' + fmtProzent(wb.umsatzAbwVjP)} farbe={neg(wb.umsatzAbwVjP) ? 'var(--rot)' : pos(wb.umsatzAbwVjP) ? 'var(--gruen)' : undefined} />
           </div>
           <div className="card">
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Personalkosten (%)</div>
+            <Wert label="O&G Ist" wert={fmtEuro(wb.ogIst) + '  (' + fmtNum(wb.ogAnteil) + ' %)'} />
+            <Wert label="O&G vs VJ" wert={fmtProzent(wb.ogAbwVjP)} farbe={neg(wb.ogAbwVjP) ? 'var(--rot)' : pos(wb.ogAbwVjP) ? 'var(--gruen)' : undefined} />
+            <Wert label="SB Ist" wert={fmtEuro(wb.sbIst) + '  (' + fmtNum(wb.sbAnteil) + ' %)'} />
+            <Wert label="SB vs VJ" wert={fmtProzent(wb.sbAbwVjP)} farbe={neg(wb.sbAbwVjP) ? 'var(--rot)' : pos(wb.sbAbwVjP) ? 'var(--gruen)' : undefined} />
+            <Wert label="Bake-Off Ums./Wo." wert={fmtEuro(wb.boUmsatz) + '  (' + fmtNum(wb.boAnteil) + ' %)'} />
+            <Wert label="Bake-Off vs VJ" wert={fmtProzent(wb.boAbwVjP)} farbe={neg(wb.boAbwVjP) ? 'var(--rot)' : pos(wb.boAbwVjP) ? 'var(--gruen)' : undefined} />
+          </div>
+          <div className="card">
+            <Wert label="Stunden Ist / Soll" wert={fmtNum(wb.stundenIst) + ' / ' + fmtNum(wb.stundenSoll)} />
+            <Wert label="Differenz" wert={fmtNum(wb.stundenDiff) + ' Std.'} farbe={pos(wb.stundenDiff) ? 'var(--rot)' : neg(wb.stundenDiff) ? 'var(--gruen)' : undefined} />
+            <Wert label="Kunden" wert={fmtNum(wb.kunden, 0)} />
+            <Wert label="Payback-Anteil" wert={fmtNum(wb.payback) + ' %'} />
+          </div>
+          <div className="card">
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Kassierleistung (Pos./Min) · VJ {fmtNum(wb.kassierVj)}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <MiniChart werte={letzte12.map((k) => k.personalkosten)} farbe="auto" invertiert breite={200} hoehe={46} />
-              <span style={{ fontSize: 22, fontWeight: 700 }}>{String(letzte12[letzte12.length - 1].personalkosten ?? '–').replace('.', ',')}</span>
+              {kassierVerlauf.length >= 2 && <MiniChart werte={kassierVerlauf} farbe="auto" breite={180} hoehe={44} />}
+              <span style={{ fontSize: 22, fontWeight: 700 }}>{fmtNum(wb.kassierIst)}</span>
+              <span style={{ fontSize: 14, color: neg(wb.kassierAbwP) ? 'var(--rot)' : 'var(--gruen)' }}>{fmtProzent(wb.kassierAbwP)}</span>
             </div>
           </div>
-          <div className="section-title">Monate</div>
-          {[...kz].reverse().map((k) => (
-            <div key={k.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-              <span style={{ minWidth: 76, fontWeight: 600 }}>{fmtMonat(k.monat)}</span>
-              <span style={{ fontSize: 14 }}>KL: <b>{String(k.kassierleistung ?? '–').replace('.', ',')}</b></span>
-              <span style={{ fontSize: 14 }}>PK: <b>{String(k.personalkosten ?? '–').replace('.', ',')} %</b></span>
-            </div>
-          ))}
         </>
       )}
-      <button className="btn" onClick={() => nav('/kennzahlen/eingabe')}>Kennzahlen eingeben</button>
+
+      {pk && (
+        <>
+          <div className="section-title">Personalkosten {fmtMonat(pk.monat)}</div>
+          <div className="card">
+            <Wert label="Plan" wert={fmtEuro(pk.planEuro) + ' · ' + fmtNum(pk.planProzent) + ' %'} />
+            <Wert label="Ist" wert={fmtEuro(pk.istEuro) + ' · ' + fmtNum(pk.istProzent) + ' %'} />
+            <Wert label="Abw. zu Plan" wert={fmtEuro(abwEuro(pk.istEuro, pk.planEuro)) + ' · ' + fmtProzent(num(pk.istProzent) - num(pk.planProzent)) + ' pp'}
+              farbe={num(pk.istProzent) > num(pk.planProzent) ? 'var(--rot)' : 'var(--gruen)'} />
+          </div>
+        </>
+      )}
+
+      <div className="chip-row" style={{ marginTop: 4 }}>
+        <span className="chip active" onClick={() => nav('/wochenbericht/eingabe?filiale=' + filiale.id)}>+ Wochenbericht</span>
+        <span className="chip active" onClick={() => nav('/personalkosten/eingabe')}>+ Personalkosten</span>
+      </div>
     </>
   )
 }

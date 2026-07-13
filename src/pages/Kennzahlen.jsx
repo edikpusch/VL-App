@@ -1,85 +1,93 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { fmtMonat, currentMonth, zieleFuer } from '../store.js'
-import { Header, Empty, MiniChart } from '../components/Ui.jsx'
+import { letzterWochenbericht } from '../ampel.js'
+import { num, fmtNum, fmtProzent, currentMonth, fmtMonat } from '../store.js'
+import { Header, Empty } from '../components/Ui.jsx'
 
 export default function Kennzahlen() {
   const [data] = useData()
   const nav = useNavigate()
 
-  const monate = useMemo(
-    () => [...new Set(data.kennzahlen.map((k) => k.monat))].sort().reverse(),
-    [data]
-  )
-  const [monat, setMonat] = useState(monate[0] || currentMonth())
+  const zeilen = useMemo(() => data.filialen.map((f) => ({ f, wb: letzterWochenbericht(data, f.id) })), [data])
+  const hatWb = zeilen.some((z) => z.wb)
 
-  const zeilen = useMemo(() => {
-    return data.filialen.map((f) => {
-      const kz = data.kennzahlen.find((k) => k.filialeId === f.id && k.monat === monat)
-      const verlauf = data.kennzahlen
-        .filter((k) => k.filialeId === f.id)
-        .sort((a, b) => a.monat.localeCompare(b.monat))
-        .slice(-12)
-      const ziele = zieleFuer(data, f.id)
-      return {
-        f, kz, ziele,
-        klVerlauf: verlauf.map((k) => k.kassierleistung),
-        kl: kz ? parseFloat(kz.kassierleistung) : NaN,
-        pk: kz ? parseFloat(kz.personalkosten) : NaN,
-      }
-    })
-  }, [data, monat])
+  const pkMonat = useMemo(() => {
+    const monate = [...new Set((data.personalkosten || []).map((p) => p.monat))].sort()
+    return monate[monate.length - 1] || currentMonth()
+  }, [data])
+  const pkZeilen = useMemo(() => data.filialen.map((f) => ({
+    f, pk: (data.personalkosten || []).find((p) => p.filialeId === f.id && p.monat === pkMonat),
+  })), [data, pkMonat])
+  const hatPk = pkZeilen.some((z) => z.pk)
 
-  const klWerte = zeilen.map((z) => z.kl).filter((v) => !isNaN(v))
-  const pkWerte = zeilen.map((z) => z.pk).filter((v) => !isNaN(v))
-  const klBest = Math.max(...klWerte), klWorst = Math.min(...klWerte)
-  const pkBest = Math.min(...pkWerte), pkWorst = Math.max(...pkWerte)
-
-  const fmtNum = (v) => (isNaN(v) ? '–' : String(v).replace('.', ','))
+  const cls = (v, gutWennKlein) => {
+    if (isNaN(v)) return ''
+    if (gutWennKlein) return v > 0 ? 'worst' : v < 0 ? 'best' : ''
+    return v < 0 ? 'worst' : v > 0 ? 'best' : ''
+  }
 
   return (
     <>
       <Header title="Kennzahlen" backTo={null} />
       <div className="page">
-        {data.kennzahlen.length === 0 ? (
-          <Empty icon="📊" text="Noch keine Kennzahlen erfasst. Starte mit der Monatseingabe." />
-        ) : (
-          <>
-            <div className="chip-row" style={{ marginBottom: 14 }}>
-              {monate.slice(0, 6).map((m) => (
-                <span key={m} className={'chip' + (monat === m ? ' active' : '')} onClick={() => setMonat(m)}>{fmtMonat(m)}</span>
-              ))}
-            </div>
+        <div className="chip-row" style={{ marginBottom: 16 }}>
+          <span className="chip active" onClick={() => nav('/wochenbericht/eingabe')}>+ Wochenbericht</span>
+          <span className="chip active" onClick={() => nav('/personalkosten/eingabe')}>+ Personalkosten</span>
+        </div>
 
-            <div className="section-title">Bezirksvergleich {fmtMonat(monat)}</div>
+        {!hatWb && !hatPk && <Empty icon="📊" text="Noch keine Kennzahlen. Starte mit dem Wochenbericht." />}
+
+        {hatWb && (
+          <>
+            <div className="section-title">Wochenbericht — Bezirksvergleich (letzte KW)</div>
             <div className="card table-wrap" style={{ padding: '4px 8px' }}>
               <table className="vergleich">
                 <thead>
-                  <tr><th>Filiale</th><th>KL</th><th>PK %</th><th>Trend KL</th></tr>
+                  <tr><th>Filiale</th><th>KW</th><th>Ums. Ist</th><th>vs Plan</th><th>vs VJ</th><th>Kassier</th></tr>
                 </thead>
                 <tbody>
-                  {zeilen.map(({ f, kl, pk, klVerlauf, ziele }) => (
+                  {zeilen.map(({ f, wb }) => (
                     <tr key={f.id} onClick={() => nav('/filiale/' + f.id + '/kennzahlen')} style={{ cursor: 'pointer' }}>
                       <td>{f.name}</td>
-                      <td className={klWerte.length > 1 ? (kl === klBest ? 'best' : kl === klWorst ? 'worst' : '') : ''}>
-                        {fmtNum(kl)}{!isNaN(kl) && kl < ziele.kassierleistung ? ' ⚠' : ''}
-                      </td>
-                      <td className={pkWerte.length > 1 ? (pk === pkBest ? 'best' : pk === pkWorst ? 'worst' : '') : ''}>
-                        {fmtNum(pk)}{!isNaN(pk) && pk > ziele.personalkosten ? ' ⚠' : ''}
-                      </td>
-                      <td><MiniChart werte={klVerlauf} farbe="auto" breite={90} hoehe={28} /></td>
+                      <td>{wb ? wb.kw : '–'}</td>
+                      <td>{wb ? fmtNum(wb.umsatzIst, 0) : '–'}</td>
+                      <td className={wb ? cls(num(wb.umsatzAbwPlanP), false) : ''}>{wb ? fmtProzent(wb.umsatzAbwPlanP) : '–'}</td>
+                      <td className={wb ? cls(num(wb.umsatzAbwVjP), false) : ''}>{wb ? fmtProzent(wb.umsatzAbwVjP) : '–'}</td>
+                      <td className={wb ? cls(num(wb.kassierAbwP), false) : ''}>{wb ? fmtNum(wb.kassierIst) : '–'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: 12.5, margin: '6px 2px 0' }}>
-              KL = Kassierleistung (Art./Min) · PK = Personalkosten · <span style={{ color: 'var(--gruen)' }}>grün = beste</span>, <span style={{ color: 'var(--rot)' }}>rot = schlechteste</span> · ⚠ = Ziel verfehlt
+          </>
+        )}
+
+        {hatPk && (
+          <>
+            <div className="section-title">Personalkosten — {fmtMonat(pkMonat)}</div>
+            <div className="card table-wrap" style={{ padding: '4px 8px' }}>
+              <table className="vergleich">
+                <thead>
+                  <tr><th>Filiale</th><th>Plan %</th><th>Ist %</th><th>Abw. pp</th></tr>
+                </thead>
+                <tbody>
+                  {pkZeilen.map(({ f, pk }) => {
+                    const abw = pk ? num(pk.istProzent) - num(pk.planProzent) : NaN
+                    return (
+                      <tr key={f.id} onClick={() => nav('/filiale/' + f.id + '/kennzahlen')} style={{ cursor: 'pointer' }}>
+                        <td>{f.name}</td>
+                        <td>{pk ? fmtNum(pk.planProzent) : '–'}</td>
+                        <td>{pk ? fmtNum(pk.istProzent) : '–'}</td>
+                        <td className={cls(abw, true)}>{isNaN(abw) ? '–' : fmtProzent(abw)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </>
         )}
-        <button className="btn" style={{ marginTop: 18 }} onClick={() => nav('/kennzahlen/eingabe')}>Monat eingeben</button>
       </div>
     </>
   )

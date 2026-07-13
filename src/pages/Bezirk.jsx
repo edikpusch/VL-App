@@ -74,7 +74,13 @@ export default function Bezirk() {
       if ((inv.bereich + ' ' + (inv.notizen || '') + ' ' + (inv.verlustbringer || []).join(' ')).toLowerCase().includes(q))
         res.push({ typ: 'Inventur', text: inv.bereich + ' ' + fmtDate(inv.datum), sub: fName(inv.filialeId), link: '/inventur/' + inv.id })
     }
-    return res.slice(0, 30)
+    for (const ti of data.tsInventuren || []) {
+      for (const b of ti.bereiche || []) {
+        if (b.name && b.name.toLowerCase().includes(q))
+          res.push({ typ: 'TS-Bereich', text: b.name + ' — ' + String(b.diffProzent ?? '–').replace('.', ',') + ' %', sub: fName(ti.filialeId) + ' · ' + fmtDate(ti.datum), link: '/ts-inventur/' + ti.id })
+      }
+    }
+    return res.slice(0, 40)
   }, [suche, data])
 
   return (

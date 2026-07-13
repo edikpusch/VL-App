@@ -13,20 +13,25 @@ import NotizEdit from './pages/NotizEdit.jsx'
 import InventurEdit from './pages/InventurEdit.jsx'
 import MitarbeiterEdit from './pages/MitarbeiterEdit.jsx'
 import Kennzahlen from './pages/Kennzahlen.jsx'
-import KennzahlenEingabe from './pages/KennzahlenEingabe.jsx'
+import AbschriftenEingabe from './pages/AbschriftenEingabe.jsx'
+import WochenberichtFlow from './pages/WochenberichtFlow.jsx'
+import PersonalkostenEingabe from './pages/PersonalkostenEingabe.jsx'
+import TsInventurEdit from './pages/TsInventurEdit.jsx'
+import Besuchsmodus from './pages/Besuchsmodus.jsx'
 import Befristungen from './pages/Befristungen.jsx'
 import Einstellungen from './pages/Einstellungen.jsx'
 
 function Inhalt() {
   const loc = useLocation()
   // Bottom-Nav auf Editor-Seiten ausblenden (Platz für Tastatur)
-  const editor = /\/(neu|edit|eingabe)|\/aufgabe\/|\/notiz\/|\/inventur\/|\/mitarbeiter\//.test(loc.pathname)
+  const editor = /\/(neu|edit|eingabe)|\/aufgabe\/|\/notiz\/|\/inventur\/|\/ts-inventur\/|\/mitarbeiter\//.test(loc.pathname)
   return (
     <>
       <Routes>
         <Route path="/" element={<Bezirk />} />
         <Route path="/filiale/neu" element={<FilialeEdit />} />
         <Route path="/filiale/:id/edit" element={<FilialeEdit />} />
+        <Route path="/filiale/:id/besuch" element={<Besuchsmodus />} />
         <Route path="/filiale/:id/:tab" element={<FilialeAkte />} />
         <Route path="/filiale/:id" element={<FilialeAkte />} />
         <Route path="/aufgaben" element={<Aufgaben />} />
@@ -39,7 +44,11 @@ function Inhalt() {
         <Route path="/mitarbeiter/:filialeId/neu" element={<MitarbeiterEdit />} />
         <Route path="/mitarbeiter/:filialeId/:id" element={<MitarbeiterEdit />} />
         <Route path="/kennzahlen" element={<Kennzahlen />} />
-        <Route path="/kennzahlen/eingabe" element={<KennzahlenEingabe />} />
+        <Route path="/abschriften/eingabe" element={<AbschriftenEingabe />} />
+        <Route path="/wochenbericht/eingabe" element={<WochenberichtFlow />} />
+        <Route path="/personalkosten/eingabe" element={<PersonalkostenEingabe />} />
+        <Route path="/ts-inventur/neu" element={<TsInventurEdit />} />
+        <Route path="/ts-inventur/:id" element={<TsInventurEdit />} />
         <Route path="/befristungen" element={<Befristungen />} />
         <Route path="/einstellungen" element={<Einstellungen />} />
         <Route path="*" element={<Bezirk />} />

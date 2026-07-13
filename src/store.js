@@ -5,6 +5,37 @@ const KEY = 'vla_data'
 
 export const BEREICHE = ['O&G', 'Bake-Off', 'SB-Fleisch/SB-Wurst', 'Mopro', 'Trocken']
 
+// Bereiche des Abschriftenreports (wöchentlich)
+export const ABSCHRIFT_BEREICHE = ['TS', 'BO', 'Blumen', 'O&G', 'Mopro', 'SB-Wurst', 'SB-Fleisch', 'SB-Fisch']
+
+// Maßnahmen-Vorschläge je Bereich (Basis; freie Maßnahmen zusätzlich möglich)
+export const MASSNAHMEN = {
+  abschrift: {
+    'BO': ['Backmengen reduzieren', 'Letzte Backung früher', 'Nachmittags-Sortiment straffen'],
+    'Blumen': ['Bestellmenge senken', 'Wasser/Präsentation prüfen', 'Rechtzeitig reduzieren'],
+    'O&G': ['Bestellmenge senken', 'Zweitplatzierung bei kurzem MHD abbauen', 'Rotation/FIFO prüfen', 'Qualität Wareneingang prüfen'],
+    'Mopro': ['MHD-Management verschärfen', 'Bestellmenge senken', 'Kühlkette prüfen'],
+    'SB-Fleisch': ['MHD-Rotation', 'Reduzieren statt abschreiben', 'Bestellmenge senken'],
+    'SB-Wurst': ['MHD-Rotation', 'Reduzieren statt abschreiben', 'Bestellmenge senken'],
+    'SB-Fisch': ['Bestellmenge senken', 'Bedientheke-Übernahme prüfen', 'MHD-Rotation'],
+    'TS': ['Bestellmenge senken', 'Aktionsware kontrollieren'],
+  },
+  inventur: {
+    _: ['Wareneingangskontrolle verschärfen', 'Leergut-Handling prüfen', 'Diebstahlsicherung erhöhen', 'MHD-Ausbuchung korrekt erfassen', 'Auszeichnung/Preise prüfen'],
+  },
+}
+
+export function massnahmenVorschlaege(typ, bereich) {
+  if (typ === 'inventur') return MASSNAHMEN.inventur[bereich] || MASSNAHMEN.inventur._
+  return MASSNAHMEN.abschrift[bereich] || ['Bestellmenge senken', 'Rotation/FIFO prüfen']
+}
+
+// Bereich → Aufgaben-Kategorie (für Maßnahme-Aufgaben)
+export function bereichZuKategorie(bereich) {
+  const map = { BO: 'Bake-Off', 'Bake-Off': 'Bake-Off', 'O&G': 'O&G', Blumen: 'O&G', Mopro: 'Sonstiges', TS: 'Sonstiges', 'SB-Fleisch': 'Fleisch', 'SB-Wurst': 'Fleisch', 'SB-Fisch': 'Fleisch', 'SB-Fleisch/SB-Wurst': 'Fleisch', Trocken: 'Sonstiges' }
+  return map[bereich] || 'Sonstiges'
+}
+
 export const DEFAULT_KATEGORIEN = [
   'Bake-Off', 'O&G', 'Fleisch', 'Getränke', 'Werbemittel',
   'TMBS', 'Inventur', 'Aktion', 'Personal', 'Sonstiges',
@@ -30,7 +61,12 @@ export function defaultData() {
     aufgaben: [],
     notizen: [],
     inventuren: [],
-    kennzahlen: [],
+    kennzahlen: [],    // (alt, ungenutzt) – ersetzt durch personalkosten + wochenberichte
+    abschriften: [],   // { id, filialeId, jahr, kw, bereich, prozent, vjProzent }
+    flops: [],         // { id, filialeId, jahr, kw, bereich, artikel, verlustEuro }
+    tsInventuren: [],  // { id, filialeId, datum, gesamtVerlustEuro, gesamtVerlustProzent, bereiche:[{name,diffEuro,diffProzent,kumEuro,kumProzent}] }
+    personalkosten: [],// { id, filialeId, monat, planEuro, planProzent, istEuro, istProzent }
+    wochenberichte: [],// { id, filialeId, jahr, kw, ...Umsatz/OG/SB/BO/Stunden/Kunden/Payback/Kassier }
   }
 }
 
@@ -94,6 +130,53 @@ export function fmtMonat(ym) {
 
 export function currentMonth() {
   return todayISO().slice(0, 7)
+}
+
+// ISO-Kalenderwoche
+export function isoWeek(d = new Date()) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  const day = date.getUTCDay() || 7
+  date.setUTCDate(date.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+  const kw = Math.ceil(((date - yearStart) / 86400000 + 1) / 7)
+  return { kw, jahr: date.getUTCFullYear() }
+}
+
+// ─── Zahlen-Helfer (Komma↔Punkt, Formatierung, Abweichungen) ─────────
+
+export function num(v) {
+  if (v === '' || v == null) return NaN
+  return parseFloat(String(v).replace(',', '.'))
+}
+
+// Anzeige: deutsche Zahl (Punkt→Komma), optional Nachkommastellen
+export function fmtNum(v, dec = 1) {
+  const n = num(v)
+  if (isNaN(n)) return '–'
+  return n.toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+export function fmtEuro(v, dec = 0) {
+  const n = num(v)
+  if (isNaN(n)) return '–'
+  return n.toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' €'
+}
+export function fmtProzent(v, dec = 1) {
+  const n = num(v)
+  if (isNaN(n)) return '–'
+  return (n > 0 ? '+' : '') + n.toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' %'
+}
+
+export function abwEuro(ist, ref) {
+  const i = num(ist), r = num(ref)
+  return isNaN(i) || isNaN(r) ? NaN : i - r
+}
+export function abwProzent(ist, ref) {
+  const i = num(ist), r = num(ref)
+  return isNaN(i) || isNaN(r) || r === 0 ? NaN : ((i - r) / r) * 100
+}
+export function anteilProzent(teil, gesamt) {
+  const t = num(teil), g = num(gesamt)
+  return isNaN(t) || isNaN(g) || g === 0 ? NaN : (t / g) * 100
 }
 
 // ─── Historie ────────────────────────────────────────────────────────

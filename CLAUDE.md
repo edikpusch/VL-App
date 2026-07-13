@@ -29,9 +29,30 @@ src/
     FilialeEdit / AufgabeEdit / NotizEdit / InventurEdit / MitarbeiterEdit
     Aufgaben.jsx    ← bezirksweit, Ansichten Fälligkeit/Filiale/Kategorie
     Kennzahlen.jsx  ← Bezirksvergleich · KennzahlenEingabe.jsx ← Monat → alle Filialen
+    AbschriftenEingabe.jsx ← KW-Schnelleingabe: je Bereich %+VJ%, Vorwoche auto, Floppliste
+    WochenberichtFlow.jsx  ← Durchklick-Wizard: Umsatz/OG/SB/BO/Stunden/Kunden/Payback/Kassier
+                             Abweichungen auto-berechnet, pro Feld überschreibbar (manual-Set)
+    PersonalkostenEingabe.jsx ← Monat → alle Filialen, Plan/Ist €+%, Abw. auto
+    TsInventurEdit.jsx     ← TS-Inventur: Gesamtverlust + 5 schwächste Bereiche (Freitext, datalist bezirksweit)
+    Besuchsmodus.jsx ← „Auf einen Blick" pro Filiale: Diagnose→Treiber→Maßnahme (→Aufgabe)
     Befristungen.jsx← bezirksweite Liste nach Ablaufdatum
     Einstellungen.jsx← Ziele, Kategorien, PIN, JSON-Backup/-Import
 ```
+
+## Kennzahlen-Architektur (mehrere Report-Typen)
+- store.js Zahlen-Helfer: `num()` (Komma→Punkt), `fmtNum/fmtEuro/fmtProzent`, `abwEuro/abwProzent/anteilProzent`.
+- `wochenberichte` (wöchentlich, pro KW): Gesamtumsatz (VJ/Plan/Ist + Abw. zu Plan UND VJ), O&G/SB (VJ/Ist/Abw./Anteil), Bake-Off (Umsatz/Wo./Abw.VJ%/Anteil), Stunden (Ist/Soll/Diff), Kunden, Payback, **Kassierstatistik** (kassierIst/kassierVj Pos./Min + Abw.). Alle Derivate gespeichert; Wizard rechnet auto, `manual`-Set schützt überschriebene Felder bei Basisänderung.
+- `personalkosten` (monatlich): planEuro/planProzent/istEuro/istProzent; Abw. berechnet.
+- `tsInventuren` (monatlich): gesamtVerlust €+%, bereiche[] (Freitext-Name + diff €/% + kum €/%). Namen bezirksweit durchsuchbar (Bezirk-Suche) + datalist-Autovervollständigung.
+- Ampel (ampel.js) nutzt jetzt: personalkosten (Ist% vs Plan%), letzterWochenbericht (Kassier vs VJ, Umsatz vs Plan), plus Abschriften + Inventuren + Befristungen. Helfer `letzterWochenbericht()`, `letzteTsInventur()`.
+- Altes `kennzahlen`-Array (kassierleistung/personalkosten) ist ABGELÖST/ungenutzt (bleibt für Alt-Backups im Schema).
+
+## Abschriften & Besuchsmodus (Kern-KPIs)
+- Echte VL-Kennzahlen = **Abschriften % je Bereich** (wöchentl.) + **Inventurdifferenz je Bereich** (monatl.). Quelle: gedruckte Reports (Abschriftenreport kompakt, Floppliste, Netto-Inventuren).
+- ABSCHRIFT_BEREICHE = TS · BO · Blumen · O&G · Mopro · SB-Wurst · SB-Fleisch · SB-Fisch (≠ Inventur-BEREICHE!)
+- Bewertung `abschriftenBewertung()` in ampel.js: Vergleich gegen **Vorjahr UND Vorwoche** (kein starrer Zielwert). Rot = schlechter als beide; Gelb = schlechter als eine; Sprung erzwingt kein Rot, wenn Wert unter VJ. Fließt in computeAmpel() ein.
+- Besuchsmodus (`/filiale/:id/besuch`): kritische Bereiche zuerst, Top-5-Verlustbringer (aufklappbar), Maßnahmen-Picker (Vorschläge aus `massnahmenVorschlaege()` + Freitext) → legt Aufgabe (Prio hoch, `bereich`-Feld) + Historie an.
+- Bilderkennung bewusst NICHT gebaut → siehe Datenschutz-Entscheidung unten.
 
 ## Datenstruktur (localStorage 'vla_data')
 ```js
@@ -45,9 +66,19 @@ src/
   aufgaben: [{ id, filialeId|null, titel, kategorie, prio, faelligkeit, beschreibung, status, intervallTage, inventurId? }],
   notizen: [{ id, filialeId|null, text, wiedervorlage, erledigt }],
   inventuren: [{ id, filialeId, datum, bereich, diffEuro, diffProzent, vjEuro, vjProzent, verlustbringer[], notizen }],
-  kennzahlen: [{ id, filialeId, monat:'YYYY-MM', kassierleistung, personalkosten }]
+  kennzahlen: [{ id, filialeId, monat:'YYYY-MM', kassierleistung, personalkosten }],
+  abschriften: [{ id, filialeId, jahr, kw, bereich, prozent, vjProzent }],
+  flops: [{ id, filialeId, jahr, kw, bereich, artikel, verlustEuro }],
+  tsInventuren: [{ id, filialeId, datum, gesamtVerlustEuro, gesamtVerlustProzent, bereiche:[{name,diffEuro,diffProzent,kumEuro,kumProzent}] }],
+  personalkosten: [{ id, filialeId, monat, planEuro, planProzent, istEuro, istProzent }],
+  wochenberichte: [{ id, filialeId, jahr, kw, umsatzVj/Plan/Ist, umsatzAbwPlanE/P, umsatzAbwVjE/P, og*, sb*, bo*, stundenIst/Soll/Diff, kunden, payback, kassierIst/Vj/Abw/AbwP }]
 }
 ```
+
+## Datenschutz / Bilderkennung (13.07.2026 entschieden)
+- Kennzahlen-Reports = firmenvertraulich, Mitarbeiterdaten = personenbezogen (DSGVO). Dürfen NICHT in öffentliche Cloud.
+- On-device OCR (Tesseract) für dichte Zahlen-Tabellen zu unzuverlässig; gute Vision-KI wäre Cloud → verboten.
+- **Entscheidung: Schnell-Eingabe (offline) als Weg.** OCR nur später und nur selbst gehostet im sicheren Netz (IT-Thema, nicht jetzt). Mitarbeiter ohnehin manuell.
 
 ## Wichtige Regeln
 - Ampel: schlechtester Einzelwert gewinnt; Begründung per Tap auf Ampel in Filialakte
