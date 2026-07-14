@@ -1,21 +1,63 @@
 import { useRef, useState } from 'react'
 import { useData } from '../useData.js'
-import { BEREICHE, sha256, save, load, defaultData, todayISO } from '../store.js'
+import { BEREICHE, sha256, save, load, num, normNum, todayISO } from '../store.js'
 import { Header } from '../components/Ui.jsx'
 
+// Einstellungen: Ziele auf Bezirks- UND Filialebene.
+// Filial-Ziel leer = erbt den Bezirks-Standard (Platzhalter zeigt ihn an).
 export default function Einstellungen() {
   const [data, update] = useData()
   const fileRef = useRef(null)
   const [katInput, setKatInput] = useState('')
+  const [scope, setScope] = useState('') // '' = Bezirks-Standard, sonst filialeId
 
-  const ziele = data.einstellungen.ziele
+  const basis = data.einstellungen.ziele
+  const filiale = scope ? data.filialen.find((f) => f.id === scope) : null
+  const ovr = scope ? (data.einstellungen.zieleProFiliale?.[scope] || {}) : null
 
+  // ── Ziel speichern (Bezirk oder Filial-Override) ──
   const setZiel = (pfad, val) => {
-    const num = val === '' ? '' : parseFloat(val.replace(',', '.'))
+    const n = val === '' ? '' : num(val)
     update((d) => {
-      if (pfad.startsWith('inv:')) d.einstellungen.ziele.inventurDiff[pfad.slice(4)] = num
-      else d.einstellungen.ziele[pfad] = num
+      if (!scope) {
+        // Bezirks-Standard
+        if (pfad.startsWith('inv:')) d.einstellungen.ziele.inventurDiff[pfad.slice(4)] = n
+        else d.einstellungen.ziele[pfad] = n
+      } else {
+        // Filial-Override: leer = löschen (erbt wieder)
+        const zpf = (d.einstellungen.zieleProFiliale ||= {})
+        const z = (zpf[scope] ||= {})
+        if (pfad.startsWith('inv:')) {
+          const inv = (z.inventurDiff ||= {})
+          if (n === '' || isNaN(n)) delete inv[pfad.slice(4)]
+          else inv[pfad.slice(4)] = n
+          if (Object.keys(inv).length === 0) delete z.inventurDiff
+        } else {
+          if (n === '' || isNaN(n)) delete z[pfad]
+          else z[pfad] = n
+        }
+        if (Object.keys(z).length === 0) delete zpf[scope]
+      }
     })
+  }
+
+  const wert = (pfad) => {
+    if (!scope) {
+      const v = pfad.startsWith('inv:') ? basis.inventurDiff[pfad.slice(4)] : basis[pfad]
+      return v === '' || v == null ? '' : String(v).replace('.', ',')
+    }
+    const v = pfad.startsWith('inv:') ? ovr.inventurDiff?.[pfad.slice(4)] : ovr[pfad]
+    return v === '' || v == null ? '' : String(v).replace('.', ',')
+  }
+  const platzhalter = (pfad) => {
+    if (!scope) return ''
+    const v = pfad.startsWith('inv:') ? basis.inventurDiff[pfad.slice(4)] : basis[pfad]
+    return v === '' || v == null ? '' : 'Bezirk: ' + String(v).replace('.', ',')
+  }
+
+  const hatOverrides = (fid) => {
+    const z = data.einstellungen.zieleProFiliale?.[fid]
+    return z && Object.keys(z).length > 0
   }
 
   // ── PIN ──
@@ -44,7 +86,6 @@ export default function Einstellungen() {
         if (e.name === 'AbortError') return
       }
     }
-    // Fallback: Download
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
     const a = document.createElement('a')
     a.href = url
@@ -61,7 +102,7 @@ export default function Einstellungen() {
       try {
         const neu = JSON.parse(reader.result)
         if (!neu || !Array.isArray(neu.filialen)) throw new Error('Ungültiges Format')
-        if (!confirm('Backup vom Import ersetzt ALLE aktuellen Daten (' + neu.filialen.length + ' Filialen, ' + (neu.aufgaben?.length || 0) + ' Aufgaben). Fortfahren?')) return
+        if (!confirm('Backup-Import ersetzt ALLE aktuellen Daten (' + neu.filialen.length + ' Filialen, ' + (neu.aufgaben?.length || 0) + ' Aufgaben). Fortfahren?')) return
         save(neu)
         location.reload()
       } catch {
@@ -72,36 +113,68 @@ export default function Einstellungen() {
     e.target.value = ''
   }
 
-  const zahl = (v) => (v === '' || v == null ? '' : String(v).replace('.', ','))
+  const addKategorie = () => {
+    const k = katInput.trim()
+    if (!k) return
+    update((d) => { if (!d.einstellungen.kategorien.includes(k)) d.einstellungen.kategorien.push(k) })
+    setKatInput('')
+  }
 
   return (
     <>
       <Header title="Einstellungen" backTo={null} />
       <div className="page">
-        <div className="section-title">🎯 Zielvorgaben (Ampel-Logik)</div>
-        <div className="card">
+        {/* ── Ziele: Bezirk / pro Filiale ── */}
+        <div className="section-title">🎯 Zielvorgaben</div>
+        <div className="chip-row" style={{ marginBottom: 10 }}>
+          <span className={'chip' + (!scope ? ' active' : '')} onClick={() => setScope('')}>Bezirks-Standard</span>
+          {data.filialen.map((f) => (
+            <span key={f.id} className={'chip' + (scope === f.id ? ' active' : '')} onClick={() => setScope(f.id)}>
+              {f.name}{hatOverrides(f.id) ? ' •' : ''}
+            </span>
+          ))}
+        </div>
+
+        <div className="card" key={scope}>
+          {scope && (
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+              Abweichende Ziele nur für <b style={{ color: 'var(--text)' }}>{filiale?.name}</b>.
+              Leere Felder erben den Bezirks-Standard.
+            </div>
+          )}
           <div className="row2" style={{ marginBottom: 10 }}>
             <div>
-              <label style={lbl}>Kassierleistung (Art./Min)</label>
-              <input style={inp} inputMode="decimal" value={zahl(ziele.kassierleistung)} onChange={(e) => setZiel('kassierleistung', e.target.value)} />
+              <label style={lbl}>Kassierleistung (Pos./Min)</label>
+              <input style={inp} inputMode="decimal" defaultValue={wert('kassierleistung')} placeholder={platzhalter('kassierleistung')}
+                onBlur={(e) => setZiel('kassierleistung', normNum(e.target.value))} />
             </div>
             <div>
               <label style={lbl}>Personalkosten (%)</label>
-              <input style={inp} inputMode="decimal" value={zahl(ziele.personalkosten)} onChange={(e) => setZiel('personalkosten', e.target.value)} />
+              <input style={inp} inputMode="decimal" defaultValue={wert('personalkosten')} placeholder={platzhalter('personalkosten')}
+                onBlur={(e) => setZiel('personalkosten', normNum(e.target.value))} />
             </div>
           </div>
           <label style={{ ...lbl, marginTop: 6 }}>Inventurdifferenz-Ziel je Bereich (%)</label>
           {BEREICHE.map((b) => (
             <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
               <span style={{ flex: 1, fontSize: 14.5 }}>{b}</span>
-              <input style={{ ...inp, width: 90 }} inputMode="decimal" value={zahl(ziele.inventurDiff[b])} onChange={(e) => setZiel('inv:' + b, e.target.value)} />
+              <input style={{ ...inp, width: 110 }} inputMode="decimal" defaultValue={wert('inv:' + b)} placeholder={platzhalter('inv:' + b)}
+                onBlur={(e) => setZiel('inv:' + b, normNum(e.target.value))} />
             </div>
           ))}
-          <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 4 }}>
-            Gelb ab Ziel überschritten, Rot ab Ziel × 1,5 (Inventur) bzw. −10 % Kassierleistung / +0,3 pp Personalkosten.
+          {scope && hatOverrides(scope) && (
+            <button className="btn small danger" style={{ marginTop: 8 }}
+              onClick={() => { if (confirm('Alle abweichenden Ziele für ' + filiale?.name + ' zurücksetzen?')) update((d) => { delete d.einstellungen.zieleProFiliale[scope] }) }}>
+              Filial-Ziele zurücksetzen
+            </button>
+          )}
+          <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 8 }}>
+            Ampel: Gelb ab Ziel überschritten, Rot ab Ziel × 1,5 (Inventur) bzw. −10 % Kassierleistung / +0,3 pp Personalkosten.
+            Abschriften werden gegen Vorjahr und Vorwoche bewertet (kein fester Zielwert). Werte gelten nach Verlassen des Feldes.
           </div>
         </div>
 
+        {/* ── Kategorien ── */}
         <div className="section-title">🏷️ Aufgaben-Kategorien</div>
         <div className="card">
           <div className="chip-row" style={{ marginBottom: 10 }}>
@@ -113,12 +186,12 @@ export default function Einstellungen() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input style={{ ...inp, flex: 1 }} value={katInput} onChange={(e) => setKatInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && katInput.trim()) { update((d) => { if (!d.einstellungen.kategorien.includes(katInput.trim())) d.einstellungen.kategorien.push(katInput.trim()) }); setKatInput('') } }}
-              placeholder="Neue Kategorie…" />
-            <button className="btn small" onClick={() => { if (katInput.trim()) { update((d) => { if (!d.einstellungen.kategorien.includes(katInput.trim())) d.einstellungen.kategorien.push(katInput.trim()) }); setKatInput('') } }}>+</button>
+              onKeyDown={(e) => e.key === 'Enter' && addKategorie()} placeholder="Neue Kategorie…" />
+            <button className="btn small" onClick={addKategorie}>+</button>
           </div>
         </div>
 
+        {/* ── PIN ── */}
         <div className="section-title">🔒 Zugriffsschutz</div>
         <div className="card">
           <div style={{ marginBottom: 10, fontSize: 14.5 }}>
@@ -127,12 +200,13 @@ export default function Einstellungen() {
           <button className="btn small secondary" onClick={pinSetzen}>{data.pinHash ? 'PIN ändern / entfernen' : 'PIN festlegen'}</button>
         </div>
 
+        {/* ── Backup ── */}
         <div className="section-title">💾 Datensicherung</div>
         <div className="card">
           <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 12 }}>
             Alle Daten liegen nur auf diesem Gerät. Regelmäßig sichern!
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn small" onClick={exportieren}>⬆️ Backup exportieren</button>
             <button className="btn small secondary" onClick={() => fileRef.current?.click()}>⬇️ Backup importieren</button>
           </div>
@@ -140,7 +214,7 @@ export default function Einstellungen() {
         </div>
 
         <div style={{ color: 'var(--muted)', fontSize: 12.5, textAlign: 'center', marginTop: 24 }}>
-          VL App V1 · 100 % offline · {data.filialen.length} Filialen
+          VL App · 100 % offline · {data.filialen.length} Filialen
         </div>
       </div>
     </>

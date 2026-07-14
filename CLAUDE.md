@@ -80,6 +80,12 @@ src/
 - On-device OCR (Tesseract) für dichte Zahlen-Tabellen zu unzuverlässig; gute Vision-KI wäre Cloud → verboten.
 - **Entscheidung: Schnell-Eingabe (offline) als Weg.** OCR nur später und nur selbst gehostet im sicheren Netz (IT-Thema, nicht jetzt). Mitarbeiter ohnehin manuell.
 
+## UX-Muster (13.07.2026 aus Praxistest)
+- Abschriften-Tab: Karte antippen klappt Verlustartikel der KW auf
+- Filial-Aufgaben: Ansicht „Diese Woche" (fällig ≤ Sonntag) + „Erledigt"-Seite; spätere Fälligkeiten (inkl. nächster Instanz wiederkehrender Aufgaben) eingeklappt unter „Später fällig"
+- Befristungen-Seite: „+ Neu" → Filiale wählen → MitarbeiterEdit mit ?befristet=1 (Vertragsart vorbelegt)
+- Einstellungen: Ziele mit Scope-Chips (Bezirks-Standard | pro Filiale); Filial-Felder leer = erben (Platzhalter „Bezirk: X"), gespeichert in zieleProFiliale, „•" am Chip markiert Overrides; Eingaben speichern onBlur (defaultValue + key={scope})
+
 ## Wichtige Regeln
 - Ampel: schlechtester Einzelwert gewinnt; Begründung per Tap auf Ampel in Filialakte
 - Befristungs-Monitor: <90 T. gelb, <30 T. rot – Entscheidung (verlängert/entfristet/läuft aus) löscht Warnung + Historie-Eintrag

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { computeAmpel, abschriftenBewertung, letzterWochenbericht } from '../ampel.js'
-import { BEREICHE, daysUntil, fmtDate, fmtMonat, addHistorie, todayISO, uid, num, fmtNum, fmtEuro, fmtProzent, fmtPP, abwEuro } from '../store.js'
+import { BEREICHE, daysUntil, fmtDate, fmtMonat, addHistorie, todayISO, addDays, uid, num, fmtNum, fmtEuro, fmtProzent, fmtPP, abwEuro } from '../store.js'
 import { Header, Ampel, Empty, MiniChart } from '../components/Ui.jsx'
 
 const TABS = [
@@ -123,25 +123,48 @@ function TabInfo({ filiale, nav }) {
 
 // ── Abschriften ──
 function TabAbschriften({ data, filiale, nav }) {
+  const [auf, setAuf] = useState(null) // aufgeklappte Warengruppe
   const bewertung = abschriftenBewertung(data, filiale.id)
   const farbHex = { rot: 'var(--rot)', gelb: 'var(--gelb)', gruen: 'var(--gruen)' }
+  const flopsFor = (b) =>
+    (data.flops || [])
+      .filter((f) => f.filialeId === filiale.id && f.bereich === b.bereich && f.kw === b.kw && f.jahr === b.jahr)
+      .sort((x, y) => (parseFloat(y.verlustEuro) || 0) - (parseFloat(x.verlustEuro) || 0))
   return (
     <>
       {bewertung.length === 0 && <Empty icon="📉" text="Noch keine Abschriften erfasst." />}
-      {bewertung.map((b) => (
-        <div key={b.bereich} className="card" style={{ borderLeft: '4px solid ' + farbHex[b.farbe] }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontWeight: 600, flex: 1 }}>{b.bereich}</span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: farbHex[b.farbe] }}>{String(b.prozent).replace('.', ',')}%</span>
+      {bewertung.map((b) => {
+        const offen = auf === b.bereich
+        const flops = offen ? flopsFor(b) : []
+        return (
+          <div key={b.bereich} className="card tappable" style={{ borderLeft: '4px solid ' + farbHex[b.farbe] }}
+            onClick={() => setAuf(offen ? null : b.bereich)}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontWeight: 600, flex: 1 }}>{b.bereich}</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: farbHex[b.farbe] }}>{String(b.prozent).replace('.', ',')}%</span>
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 13, color: 'var(--muted)', alignItems: 'center' }}>
+              {!isNaN(b.vjProzent) && <span>VJ {String(b.vjProzent).replace('.', ',')}{b.prozent > b.vjProzent ? ' ▲' : ' ▼'}</span>}
+              {!isNaN(b.vorwoche) && <span>VW {String(b.vorwoche).replace('.', ',')}{b.prozent > b.vorwoche ? ' ▲' : ' ▼'}</span>}
+              <span style={{ marginLeft: 'auto' }}>KW {b.kw}</span>
+              {b.verlauf.length >= 2 && <MiniChart werte={b.verlauf} farbe="auto" invertiert breite={90} hoehe={26} />}
+              <span style={{ color: 'var(--muted)' }}>{offen ? '▲' : '▼'}</span>
+            </div>
+            {offen && (
+              <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 4 }}>Verlustartikel KW {b.kw}</div>
+                {flops.length === 0 && <div style={{ fontSize: 13.5, color: 'var(--muted)' }}>Keine Verlustartikel für diese KW erfasst.</div>}
+                {flops.map((f) => (
+                  <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, padding: '2px 0' }}>
+                    <span>{f.artikel}</span>
+                    <span style={{ fontWeight: 600 }}>{fmtEuro(f.verlustEuro)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 13, color: 'var(--muted)', alignItems: 'center' }}>
-            {!isNaN(b.vjProzent) && <span>VJ {String(b.vjProzent).replace('.', ',')}{b.prozent > b.vjProzent ? ' ▲' : ' ▼'}</span>}
-            {!isNaN(b.vorwoche) && <span>VW {String(b.vorwoche).replace('.', ',')}{b.prozent > b.vorwoche ? ' ▲' : ' ▼'}</span>}
-            <span style={{ marginLeft: 'auto' }}>KW {b.kw}</span>
-            {b.verlauf.length >= 2 && <MiniChart werte={b.verlauf} farbe="auto" invertiert breite={90} hoehe={26} />}
-          </div>
-        </div>
-      ))}
+        )
+      })}
       <button className="btn" onClick={() => nav('/abschriften/eingabe?filiale=' + filiale.id)}>Abschriften eingeben</button>
     </>
   )
@@ -212,12 +235,55 @@ export function AufgabenListe({ aufgaben, data, update, nav, zeigeFiliale }) {
 }
 
 function TabAufgaben({ data, update, filiale, nav }) {
-  const offen = data.aufgaben
-    .filter((a) => a.filialeId === filiale.id && a.status === 'offen')
+  const [zeige, setZeige] = useState('woche') // woche | erledigt
+  const [zeigeSpaeter, setZeigeSpaeter] = useState(false)
+
+  // Sonntag dieser Woche = Grenze für „aktuell"
+  const wtag = (new Date().getDay() + 6) % 7 // Mo=0 … So=6
+  const sonntag = addDays(todayISO(), 6 - wtag)
+
+  const alle = data.aufgaben.filter((a) => a.filialeId === filiale.id)
+  const offen = alle
+    .filter((a) => a.status === 'offen')
     .sort((a, b) => (a.faelligkeit || '9999').localeCompare(b.faelligkeit || '9999'))
+  // Nur Tages-/Wochenaufgaben; spätere (z. B. nächste Instanz wiederkehrender) bleiben eingeklappt
+  const aktuell = offen.filter((a) => !a.faelligkeit || a.faelligkeit <= sonntag)
+  const spaeter = offen.filter((a) => a.faelligkeit && a.faelligkeit > sonntag)
+  const erledigt = alle
+    .filter((a) => a.status === 'erledigt')
+    .sort((a, b) => (b.erledigtAm || '').localeCompare(a.erledigtAm || ''))
+    .slice(0, 50)
+
   return (
     <>
-      <AufgabenListe aufgaben={offen} data={data} update={update} nav={nav} />
+      <div className="chip-row" style={{ marginBottom: 12 }}>
+        <span className={'chip' + (zeige === 'woche' ? ' active' : '')} onClick={() => setZeige('woche')}>Diese Woche ({aktuell.length})</span>
+        <span className={'chip' + (zeige === 'erledigt' ? ' active' : '')} onClick={() => setZeige('erledigt')}>✓ Erledigt ({erledigt.length})</span>
+      </div>
+
+      {zeige === 'woche' && (
+        <>
+          <AufgabenListe aufgaben={aktuell} data={data} update={update} nav={nav} />
+          {spaeter.length > 0 && (
+            <>
+              <div className="card tappable" style={{ display: 'flex', alignItems: 'center', gap: 10 }} onClick={() => setZeigeSpaeter(!zeigeSpaeter)}>
+                <span>📅</span>
+                <span style={{ flex: 1, fontSize: 14.5 }}>Später fällig</span>
+                <span className="badge">{spaeter.length}</span>
+                <span style={{ color: 'var(--muted)' }}>{zeigeSpaeter ? '▲' : '▼'}</span>
+              </div>
+              {zeigeSpaeter && <AufgabenListe aufgaben={spaeter} data={data} update={update} nav={nav} />}
+            </>
+          )}
+        </>
+      )}
+
+      {zeige === 'erledigt' && (
+        erledigt.length === 0
+          ? <Empty icon="📭" text="Noch nichts erledigt." />
+          : <AufgabenListe aufgaben={erledigt} data={data} update={update} nav={nav} />
+      )}
+
       <button className="fab" onClick={() => nav('/aufgabe/neu?filiale=' + filiale.id)}>+</button>
     </>
   )

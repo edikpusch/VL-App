@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { uid, FUNKTIONEN, fmtDate, todayISO, addHistorie, daysUntil } from '../store.js'
 import { Header } from '../components/Ui.jsx'
 
 export default function MitarbeiterEdit() {
   const { filialeId, id } = useParams()
+  const [sp] = useSearchParams()
   const nav = useNavigate()
   const [data, update] = useData()
   const filiale = data.filialen.find((f) => f.id === filialeId)
@@ -15,7 +16,7 @@ export default function MitarbeiterEdit() {
   const [ma, setMa] = useState(
     bestehend
       ? { ...bestehend }
-      : { id: uid(), name: '', funktion: 'VK', vertragsart: 'unbefristet', vertragsende: '', notiz: '', entscheidung: null }
+      : { id: uid(), name: '', funktion: 'VK', vertragsart: sp.get('befristet') ? 'befristet' : 'unbefristet', vertragsende: '', notiz: '', entscheidung: null }
   )
   const [entscheidungBis, setEntscheidungBis] = useState('')
 

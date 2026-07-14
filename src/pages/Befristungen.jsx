@@ -1,13 +1,15 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { daysUntil, fmtDate } from '../store.js'
 import { Header, Empty } from '../components/Ui.jsx'
 
-// Bezirksweite Befristungsliste, sortiert nach Ablaufdatum
+// Bezirksweite Befristungsliste, sortiert nach Ablaufdatum.
+// Neue Befristungen direkt von hier anlegen (Filiale wählen → Mitarbeiter).
 export default function Befristungen() {
   const [data] = useData()
   const nav = useNavigate()
+  const [neuPicker, setNeuPicker] = useState(false)
 
   const liste = useMemo(() => {
     const res = []
@@ -23,9 +25,28 @@ export default function Befristungen() {
 
   return (
     <>
-      <Header title="Befristungen" backTo={null} right={<span className="badge accent">{liste.length}</span>} />
+      <Header
+        title="Befristungen"
+        backTo={null}
+        right={<button className="btn small" onClick={() => setNeuPicker(!neuPicker)}>+ Neu</button>}
+      />
       <div className="page">
-        {liste.length === 0 && <Empty icon="⏳" text="Keine befristeten Verträge im Bezirk." />}
+        {neuPicker && (
+          <div className="card">
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>Befristeten Vertrag anlegen — in welcher Filiale?</div>
+            <div className="chip-row">
+              {data.filialen.map((f) => (
+                <span key={f.id} className="chip" onClick={() => nav('/mitarbeiter/' + f.id + '/neu?befristet=1')}>{f.name}</span>
+              ))}
+              {data.filialen.length === 0 && <span style={{ color: 'var(--muted)', fontSize: 14 }}>Erst eine Filiale anlegen.</span>}
+            </div>
+          </div>
+        )}
+
+        {liste.length === 0 && (
+          <Empty icon="⏳" text={'Keine befristeten Verträge erfasst. Über „+ Neu" oben legst du Mitarbeiter mit Vertragsende an — die App warnt dann automatisch.'} />
+        )}
+
         {liste.map(({ ma, filiale, tage }) => {
           const offen = !ma.entscheidung
           const farbe = offen && tage < 30 ? 'rot' : offen && tage < 90 ? 'gelb' : ''
@@ -48,6 +69,12 @@ export default function Befristungen() {
             </div>
           )
         })}
+
+        <div className="card" style={{ marginTop: 14, fontSize: 13, color: 'var(--muted)' }}>
+          ⚠️ Automatische Warnungen: <span style={{ color: 'var(--gelb)' }}>gelb</span> ab 3 Monaten (90 T.),{' '}
+          <span style={{ color: 'var(--rot)' }}>rot</span> ab 1 Monat (30 T.) vor Vertragsende — sichtbar in der
+          Heute-Leiste, der Filial-Ampel und hier. Eine dokumentierte Entscheidung (verlängert/entfristet/läuft aus) löscht die Warnung.
+        </div>
       </div>
     </>
   )
