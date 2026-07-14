@@ -80,6 +80,11 @@ src/
 - On-device OCR (Tesseract) für dichte Zahlen-Tabellen zu unzuverlässig; gute Vision-KI wäre Cloud → verboten.
 - **Entscheidung: Schnell-Eingabe (offline) als Weg.** OCR nur später und nur selbst gehostet im sicheren Netz (IT-Thema, nicht jetzt). Mitarbeiter ohnehin manuell.
 
+## Filial-Report, Smart-Eingabe, Vorschläge (14.07.2026)
+- Report.jsx (`/filiale/:id/report`): helle Druckansicht (.report + @media print in styles.css), Blöcke aus REPORT_BLOECKE, Vorlage in einstellungen.reportBloecke (gilt für alle Filialen, Toggle speichert sofort). window.print() = Drucken + PDF. Personalkosten bewusst nicht im Default.
+- Smart-Eingabe: `focusNextOnEnter` (Ui.jsx) + enterKeyHint="next" auf allen Zahlenfeldern; WochenberichtFlow: Kern-Steps 1–3 (Umsatz/Stunden/Kassier, „Speichern ohne Details" auf Step 3), O&G+SB und BO optional; berechnete Felder je Step im einklappbaren <Berechnet>-Block (auto-offen wenn manuell überschrieben).
+- Vorschlags-Gedächtnis: data.vorschlaege {artikel[{name,bereich}], massnahmen[], aufgaben[]}, lernt via `lerneVorschlag()` bei jedem Speichern (Flops, Verlustbringer, Maßnahmen, Aufgaben-Titel); Anzeige über <VorschlagListen data> (datalists dl-artikel/dl-massnahmen/dl-aufgaben) + input list="…"; Pflege (einzeln löschen) in Einstellungen.
+
 ## UX-Muster (13.07.2026 aus Praxistest)
 - Abschriften-Tab: Karte antippen klappt Verlustartikel der KW auf
 - Filial-Aufgaben: Ansicht „Diese Woche" (fällig ≤ Sonntag) + „Erledigt"-Seite; spätere Fälligkeiten (inkl. nächster Instanz wiederkehrender Aufgaben) eingeklappt unter „Später fällig"

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { uid, currentMonth, fmtMonat, num, normNum, fmtEuro, fmtPP, abwEuro } from '../store.js'
-import { Header, Empty } from '../components/Ui.jsx'
+import { Header, Empty, focusNextOnEnter } from '../components/Ui.jsx'
 
 // Personalkosten pro Monat, alle Filialen: Plan/Ist in € und %, Abweichung auto.
 export default function PersonalkostenEingabe() {
@@ -57,21 +57,21 @@ export default function PersonalkostenEingabe() {
               <div className="row2" style={{ marginBottom: 8 }}>
                 <div>
                   <label style={lbl}>Plankosten (€)</label>
-                  <input style={inp} inputMode="decimal" value={dv(w.planEuro)} onChange={(e) => set(f.id, 'planEuro', e.target.value)} />
+                  <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={dv(w.planEuro)} onChange={(e) => set(f.id, 'planEuro', e.target.value)} />
                 </div>
                 <div>
                   <label style={lbl}>Plan (%)</label>
-                  <input style={inp} inputMode="decimal" value={dv(w.planProzent)} onChange={(e) => set(f.id, 'planProzent', e.target.value)} />
+                  <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={dv(w.planProzent)} onChange={(e) => set(f.id, 'planProzent', e.target.value)} />
                 </div>
               </div>
               <div className="row2">
                 <div>
                   <label style={lbl}>Ist Monat (€)</label>
-                  <input style={inp} inputMode="decimal" value={dv(w.istEuro)} onChange={(e) => set(f.id, 'istEuro', e.target.value)} />
+                  <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={dv(w.istEuro)} onChange={(e) => set(f.id, 'istEuro', e.target.value)} />
                 </div>
                 <div>
                   <label style={lbl}>Ist (%)</label>
-                  <input style={inp} inputMode="decimal" value={dv(w.istProzent)} onChange={(e) => set(f.id, 'istProzent', e.target.value)} />
+                  <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={dv(w.istProzent)} onChange={(e) => set(f.id, 'istProzent', e.target.value)} />
                 </div>
               </div>
               {(!isNaN(abwE) || !isNaN(abwP)) && (

@@ -65,8 +65,9 @@ export default function FilialeAkte() {
       </div>
 
       {tab === 'info' && (
-        <div className="page" style={{ paddingTop: 6, paddingBottom: 0 }}>
-          <button className="btn" onClick={() => nav('/filiale/' + id + '/besuch')}>▶ Besuchsmodus starten</button>
+        <div className="page" style={{ paddingTop: 6, paddingBottom: 0, display: 'flex', gap: 10 }}>
+          <button className="btn" style={{ flex: 2, marginTop: 0 }} onClick={() => nav('/filiale/' + id + '/besuch')}>▶ Besuchsmodus</button>
+          <button className="btn secondary" style={{ flex: 1, marginTop: 0 }} onClick={() => nav('/filiale/' + id + '/report')}>🖨️ Report</button>
         </div>
       )}
 

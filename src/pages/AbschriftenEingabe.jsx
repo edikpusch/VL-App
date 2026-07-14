@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { ABSCHRIFT_BEREICHE, uid, isoWeek, normNum } from '../store.js'
+import { ABSCHRIFT_BEREICHE, uid, isoWeek, normNum, lerneVorschlag } from '../store.js'
+import { focusNextOnEnter, VorschlagListen } from '../components/Ui.jsx'
 
 // Schnell-Eingabe Abschriftenreport: KW wählen → je Bereich % + VJ %.
 // Vorwoche wird automatisch aus der vorherigen KW angezeigt.
@@ -77,6 +78,7 @@ export default function AbschriftenEingabe() {
       for (const f of flops) {
         if (!f.artikel.trim()) continue
         d.flops.push({ id: f.id || uid(), filialeId, jahr, kw, bereich: f.bereich, artikel: f.artikel.trim(), verlustEuro: f.verlustEuro || '0' })
+        lerneVorschlag(d, 'artikel', f.artikel, f.bereich)
       }
     })
     nav('/filiale/' + filialeId + '/abschriften', { replace: true })
@@ -88,6 +90,7 @@ export default function AbschriftenEingabe() {
         <button className="back" onClick={() => nav(-1)}>‹</button>
         <h1>Abschriften eingeben</h1>
       </div>
+      <VorschlagListen data={data} />
       <div className="page">
         <div className="field">
           <label>Filiale</label>
@@ -117,8 +120,8 @@ export default function AbschriftenEingabe() {
           {ABSCHRIFT_BEREICHE.map((b) => (
             <div key={b} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 4px' }}>
               <span style={{ flex: 1, fontSize: 14.5 }}>{b}</span>
-              <input style={{ ...inp, width: 76, textAlign: 'center' }} inputMode="decimal" value={String(werte[b]?.prozent ?? '').replace('.', ',')} onChange={(e) => set(b, 'prozent', e.target.value)} />
-              <input style={{ ...inp, width: 76, textAlign: 'center' }} inputMode="decimal" value={String(werte[b]?.vjProzent ?? '').replace('.', ',')} onChange={(e) => set(b, 'vjProzent', e.target.value)} />
+              <input style={{ ...inp, width: 76, textAlign: 'center' }} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(werte[b]?.prozent ?? '').replace('.', ',')} onChange={(e) => set(b, 'prozent', e.target.value)} />
+              <input style={{ ...inp, width: 76, textAlign: 'center' }} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(werte[b]?.vjProzent ?? '').replace('.', ',')} onChange={(e) => set(b, 'vjProzent', e.target.value)} />
               <span style={{ width: 46, textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>{vorwoche[b] != null ? String(vorwoche[b]).replace('.', ',') : '–'}</span>
             </div>
           ))}
@@ -134,8 +137,8 @@ export default function AbschriftenEingabe() {
             <select style={{ ...inp, width: 96 }} value={f.bereich} onChange={(e) => setFlop(i, 'bereich', e.target.value)}>
               {ABSCHRIFT_BEREICHE.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
-            <input style={{ ...inp, flex: 1 }} value={f.artikel} onChange={(e) => setFlop(i, 'artikel', e.target.value)} placeholder="Artikel" />
-            <input style={{ ...inp, width: 66 }} inputMode="decimal" value={String(f.verlustEuro ?? '').replace('.', ',')} onChange={(e) => setFlop(i, 'verlustEuro', e.target.value)} placeholder="€" />
+            <input style={{ ...inp, flex: 1 }} list="dl-artikel" value={f.artikel} onChange={(e) => setFlop(i, 'artikel', e.target.value)} placeholder="Artikel" />
+            <input style={{ ...inp, width: 66 }} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(f.verlustEuro ?? '').replace('.', ',')} onChange={(e) => setFlop(i, 'verlustEuro', e.target.value)} placeholder="€" />
             <button className="btn small danger" onClick={() => setFlops(flops.filter((_, j) => j !== i))}>✕</button>
           </div>
         ))}

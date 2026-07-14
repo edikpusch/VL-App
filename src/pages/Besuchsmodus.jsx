@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { computeAmpel, abschriftenBewertung, letzterWochenbericht, letzteTsInventur } from '../ampel.js'
-import { BEREICHE, uid, todayISO, fmtDate, daysUntil, addHistorie, bereichZuKategorie, massnahmenVorschlaege, num, fmtNum, fmtEuro, fmtProzent } from '../store.js'
-import { Header, Ampel, MiniChart } from '../components/Ui.jsx'
+import { BEREICHE, uid, todayISO, fmtDate, daysUntil, addHistorie, bereichZuKategorie, massnahmenVorschlaege, lerneVorschlag, num, fmtNum, fmtEuro, fmtProzent } from '../store.js'
+import { Header, Ampel, MiniChart, VorschlagListen } from '../components/Ui.jsx'
 
 // „Auf einen Blick" – konsolidierte Filialbesuchs-Ansicht:
 // Diagnose (Zahl) → Treiber (Floppliste) → Maßnahme (wird Aufgabe)
@@ -54,6 +54,7 @@ export default function Besuchsmodus() {
         status: 'offen', intervallTage: 0, bereich,
       })
       addHistorie(d, id, 'Maßnahme angelegt: ' + titel + ' (' + bereich + ')')
+      lerneVorschlag(d, 'massnahmen', titel)
     })
   }
 
@@ -62,6 +63,7 @@ export default function Besuchsmodus() {
   return (
     <>
       <Header title={'Besuch: ' + filiale.name} backTo={'/filiale/' + id} />
+      <VorschlagListen data={data} />
       <div className="page">
         {/* Ampel-Kopf */}
         <div className="card" style={{ borderLeft: '4px solid ' + farbHex[ampel.farbe] }}>
@@ -253,10 +255,11 @@ function BereichKarte({ b, flops, onMassnahme, farbHex }) {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
+              list="dl-massnahmen"
               style={{ flex: 1, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px', outline: 'none' }}
               value={frei} onChange={(e) => setFrei(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && frei.trim()) { onMassnahme(b.bereich, frei.trim()); setFrei(''); setPicker(false) } }}
-              placeholder="Eigene Maßnahme…"
+              placeholder="Eigene Maßnahme… (tippen für Vorschläge)"
             />
             <button className="btn small" onClick={() => { if (frei.trim()) { onMassnahme(b.bereich, frei.trim()); setFrei(''); setPicker(false) } }}>✓</button>
           </div>

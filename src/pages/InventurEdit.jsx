@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { uid, todayISO, BEREICHE, addHistorie, normNum } from '../store.js'
-import { Header } from '../components/Ui.jsx'
+import { uid, todayISO, BEREICHE, addHistorie, normNum, lerneVorschlag } from '../store.js'
+import { Header, VorschlagListen, focusNextOnEnter } from '../components/Ui.jsx'
 
 export default function InventurEdit() {
   const { id } = useParams()
@@ -55,6 +55,7 @@ export default function InventurEdit() {
         beschreibung: 'Maßnahme aus Inventur ' + inv.bereich + ' vom ' + inv.datum,
         status: 'offen', intervallTage: 0, inventurId: inv.id,
       })
+      lerneVorschlag(d, 'massnahmen', titel.trim())
     })
   }
 
@@ -64,12 +65,14 @@ export default function InventurEdit() {
     const v = vbInput.trim()
     if (!v) return
     set('verlustbringer', [...inv.verlustbringer, v])
+    update((d) => lerneVorschlag(d, 'artikel', v, inv.bereich))
     setVbInput('')
   }
 
   return (
     <>
       <Header title={neu ? 'Inventur-Ergebnis' : 'Inventur bearbeiten'} />
+      <VorschlagListen data={data} />
       <div className="page">
         <div className="row2">
           <div className="field">
@@ -123,10 +126,11 @@ export default function InventurEdit() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
+              list="dl-artikel"
               style={{ flex: 1, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', outline: 'none' }}
               value={vbInput} onChange={(e) => setVbInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addVb()}
-              placeholder="Artikel eingeben…"
+              placeholder="Artikel eingeben… (tippen für Vorschläge)"
             />
             <button className="btn small" onClick={addVb}>+</button>
           </div>

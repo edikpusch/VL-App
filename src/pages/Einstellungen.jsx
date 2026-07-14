@@ -191,6 +191,20 @@ export default function Einstellungen() {
           </div>
         </div>
 
+        {/* ── Vorschläge ── */}
+        <div className="section-title">📚 Vorschlags-Listen</div>
+        <div className="card">
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>
+            Lernt automatisch aus deinen Eingaben — Tipp zum Entfernen einzelner Vorschläge.
+          </div>
+          <VorschlagPflege titel="Artikel" items={(data.vorschlaege?.artikel || []).map((a) => a.name)}
+            onDelete={(name) => update((d) => { d.vorschlaege.artikel = d.vorschlaege.artikel.filter((a) => a.name !== name) })} />
+          <VorschlagPflege titel="Maßnahmen" items={data.vorschlaege?.massnahmen || []}
+            onDelete={(m) => update((d) => { d.vorschlaege.massnahmen = d.vorschlaege.massnahmen.filter((x) => x !== m) })} />
+          <VorschlagPflege titel="Aufgaben-Titel" items={data.vorschlaege?.aufgaben || []}
+            onDelete={(t) => update((d) => { d.vorschlaege.aufgaben = d.vorschlaege.aufgaben.filter((x) => x !== t) })} />
+        </div>
+
         {/* ── PIN ── */}
         <div className="section-title">🔒 Zugriffsschutz</div>
         <div className="card">
@@ -218,6 +232,27 @@ export default function Einstellungen() {
         </div>
       </div>
     </>
+  )
+}
+
+function VorschlagPflege({ titel, items, onDelete }) {
+  const [offen, setOffen] = useState(false)
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 0' }} onClick={() => setOffen(!offen)}>
+        <span style={{ flex: 1, fontSize: 14.5 }}>{titel}</span>
+        <span className="badge">{items.length}</span>
+        <span style={{ color: 'var(--muted)' }}>{offen ? '▲' : '▼'}</span>
+      </div>
+      {offen && (
+        <div className="chip-row" style={{ paddingTop: 6 }}>
+          {items.length === 0 && <span style={{ color: 'var(--muted)', fontSize: 13.5 }}>Noch nichts gelernt.</span>}
+          {items.map((it) => (
+            <span key={it} className="chip" onClick={() => onDelete(it)}>{it} ✕</span>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

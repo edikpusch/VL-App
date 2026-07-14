@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
-import { uid, todayISO, addDays, addHistorie } from '../store.js'
-import { Header } from '../components/Ui.jsx'
+import { uid, todayISO, addDays, addHistorie, lerneVorschlag } from '../store.js'
+import { Header, VorschlagListen } from '../components/Ui.jsx'
 
 export default function AufgabeEdit() {
   const { id } = useParams()
@@ -32,6 +32,7 @@ export default function AufgabeEdit() {
       const idx = d.aufgaben.findIndex((x) => x.id === a.id)
       if (idx >= 0) d.aufgaben[idx] = a
       else d.aufgaben.unshift(a)
+      lerneVorschlag(d, 'aufgaben', a.titel)
     })
     nav(-1)
   }
@@ -72,8 +73,9 @@ export default function AufgabeEdit() {
 
         <div className="field">
           <label>Titel *</label>
-          <input value={a.titel} onChange={(e) => set('titel', e.target.value)} placeholder="Was ist zu tun?" autoFocus={neu} />
+          <input list="dl-aufgaben" value={a.titel} onChange={(e) => set('titel', e.target.value)} placeholder="Was ist zu tun? (tippen für Vorschläge)" autoFocus={neu} />
         </div>
+        <VorschlagListen data={data} />
 
         <div className="field">
           <label>Priorität</label>

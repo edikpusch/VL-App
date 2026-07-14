@@ -43,6 +43,17 @@ export const DEFAULT_KATEGORIEN = [
 
 export const FUNKTIONEN = ['ML', 'stv. ML', 'MLV', 'VK', 'GfB', 'Azubi', 'Sonstige']
 
+// Wählbare Blöcke des Filial-Reports (Vorlage in einstellungen.reportBloecke)
+export const REPORT_BLOECKE = [
+  ['abschriften', 'Abschriften je Warengruppe'],
+  ['flops', 'Verlustartikel (Floppliste)'],
+  ['wochenbericht', 'Umsatz (Wochenbericht)'],
+  ['kassier', 'Kassierleistung & Stunden'],
+  ['inventuren', 'Inventurdifferenzen + TS'],
+  ['personalkosten', 'Personalkosten'],
+  ['massnahmen', 'Offene Maßnahmen & Aufgaben'],
+]
+
 export function defaultData() {
   return {
     version: 1,
@@ -56,7 +67,11 @@ export function defaultData() {
         personalkosten: 8.5,      // % vom Umsatz
       },
       zieleProFiliale: {},        // { [filialeId]: { kassierleistung?, personalkosten?, inventurDiff? } }
+      // Report-Vorlage: gilt für alle Filialen (Personalkosten bewusst nicht default)
+      reportBloecke: ['abschriften', 'flops', 'kassier', 'inventuren', 'massnahmen'],
     },
+    // Lernende Vorschlags-Listen (automatisch aus Eingaben, in Einstellungen pflegbar)
+    vorschlaege: { artikel: [], massnahmen: [], aufgaben: [] },
     filialen: [],
     aufgaben: [],
     notizen: [],
@@ -140,6 +155,22 @@ export function isoWeek(d = new Date()) {
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
   const kw = Math.ceil(((date - yearStart) / 86400000 + 1) / 7)
   return { kw, jahr: date.getUTCFullYear() }
+}
+
+// ─── Vorschlags-Gedächtnis (Artikel / Maßnahmen / Aufgaben-Titel) ────
+// Lernt automatisch aus jeder Eingabe; Duplikate (case-insensitiv) werden ignoriert.
+
+export function lerneVorschlag(data, typ, wert, bereich) {
+  const w = String(wert || '').trim()
+  if (!w) return
+  const v = (data.vorschlaege ||= { artikel: [], massnahmen: [], aufgaben: [] })
+  if (typ === 'artikel') {
+    if (!v.artikel.some((a) => a.name.toLowerCase() === w.toLowerCase())) {
+      v.artikel.push({ name: w, bereich: bereich || '' })
+    }
+  } else if (v[typ] && !v[typ].some((x) => x.toLowerCase() === w.toLowerCase())) {
+    v[typ].push(w)
+  }
 }
 
 // ─── Zahlen-Helfer (Komma↔Punkt, Formatierung, Abweichungen) ─────────

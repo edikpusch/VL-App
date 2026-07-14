@@ -37,6 +37,34 @@ export function BottomNav() {
   )
 }
 
+// Enter/„Weiter" auf dem Zahlenblock springt zum nächsten Eingabefeld
+export function focusNextOnEnter(e) {
+  if (e.key !== 'Enter') return
+  e.preventDefault()
+  const inputs = [...document.querySelectorAll('input[inputmode="decimal"], input[inputmode="numeric"], input[type="number"]')]
+  const i = inputs.indexOf(e.target)
+  if (i >= 0 && inputs[i + 1]) inputs[i + 1].focus()
+  else e.target.blur()
+}
+
+// Datalist für lernende Vorschläge: <input list="dl-massnahmen" /> etc.
+export function VorschlagListen({ data }) {
+  const v = data.vorschlaege || {}
+  return (
+    <>
+      <datalist id="dl-artikel">
+        {(v.artikel || []).map((a) => <option key={a.name} value={a.name} />)}
+      </datalist>
+      <datalist id="dl-massnahmen">
+        {(v.massnahmen || []).map((m) => <option key={m} value={m} />)}
+      </datalist>
+      <datalist id="dl-aufgaben">
+        {(v.aufgaben || []).map((t) => <option key={t} value={t} />)}
+      </datalist>
+    </>
+  )
+}
+
 export function Empty({ icon, text }) {
   return (
     <div className="empty">

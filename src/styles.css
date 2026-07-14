@@ -233,6 +233,28 @@ input, select, textarea, button { font: inherit; color: inherit; }
 .hist-item { display: flex; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 14.5px; }
 .hist-item .datum { color: var(--muted); flex-shrink: 0; font-size: 13px; padding-top: 2px; min-width: 74px; }
 
+/* ── Filial-Report (helle Druckansicht) ── */
+.report {
+  background: #fff; color: #111; border-radius: 12px; padding: 20px;
+  font-size: 13px; line-height: 1.45;
+}
+.report section { margin-bottom: 14px; }
+.report h3 {
+  font-size: 13.5px; margin: 0 0 5px; padding-bottom: 3px;
+  border-bottom: 1px solid #bbb; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.report table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.report th, .report td { padding: 4px 6px; text-align: left; border-bottom: 1px solid #e2e2e2; }
+.report th { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+
+@media print {
+  body { background: #fff !important; }
+  .no-print, .bottomnav, .fab, .header, .tabs { display: none !important; }
+  #root { max-width: none; padding-bottom: 0; }
+  .page { padding: 0; }
+  .report { border-radius: 0; padding: 0; }
+}
+
 /* ── Tabellen (Bezirksvergleich) ── */
 .table-wrap { overflow-x: auto; }
 table.vergleich { width: 100%; border-collapse: collapse; font-size: 14px; }

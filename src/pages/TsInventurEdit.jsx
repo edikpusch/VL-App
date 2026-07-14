@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../useData.js'
 import { uid, todayISO, addHistorie, normNum } from '../store.js'
-import { Header } from '../components/Ui.jsx'
+import { Header, focusNextOnEnter } from '../components/Ui.jsx'
 
 // TS-Inventur: Gesamtverlust + die 5 schwächsten Bereiche (Freitext).
 // Bereichsnamen werden filialübergreifend als Vorschläge angeboten (datalist).
@@ -89,21 +89,21 @@ export default function TsInventurEdit() {
             <div className="row2" style={{ marginBottom: 8 }}>
               <div>
                 <label style={lbl}>Diff. letzte Inv. (€)</label>
-                <input style={inp} inputMode="decimal" value={String(b.diffEuro ?? '').replace('.', ',')} onChange={(e) => setB(i, 'diffEuro', e.target.value)} />
+                <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(b.diffEuro ?? '').replace('.', ',')} onChange={(e) => setB(i, 'diffEuro', e.target.value)} />
               </div>
               <div>
                 <label style={lbl}>Diff. (%)</label>
-                <input style={inp} inputMode="decimal" value={String(b.diffProzent ?? '').replace('.', ',')} onChange={(e) => setB(i, 'diffProzent', e.target.value)} />
+                <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(b.diffProzent ?? '').replace('.', ',')} onChange={(e) => setB(i, 'diffProzent', e.target.value)} />
               </div>
             </div>
             <div className="row2">
               <div>
                 <label style={lbl}>Kumuliert (€)</label>
-                <input style={inp} inputMode="decimal" value={String(b.kumEuro ?? '').replace('.', ',')} onChange={(e) => setB(i, 'kumEuro', e.target.value)} />
+                <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(b.kumEuro ?? '').replace('.', ',')} onChange={(e) => setB(i, 'kumEuro', e.target.value)} />
               </div>
               <div>
                 <label style={lbl}>Kumuliert (%)</label>
-                <input style={inp} inputMode="decimal" value={String(b.kumProzent ?? '').replace('.', ',')} onChange={(e) => setB(i, 'kumProzent', e.target.value)} />
+                <input style={inp} inputMode="decimal" enterKeyHint="next" onKeyDown={focusNextOnEnter} value={String(b.kumProzent ?? '').replace('.', ',')} onChange={(e) => setB(i, 'kumProzent', e.target.value)} />
               </div>
             </div>
           </div>

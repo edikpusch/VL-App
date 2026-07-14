@@ -18,13 +18,14 @@ import WochenberichtFlow from './pages/WochenberichtFlow.jsx'
 import PersonalkostenEingabe from './pages/PersonalkostenEingabe.jsx'
 import TsInventurEdit from './pages/TsInventurEdit.jsx'
 import Besuchsmodus from './pages/Besuchsmodus.jsx'
+import Report from './pages/Report.jsx'
 import Befristungen from './pages/Befristungen.jsx'
 import Einstellungen from './pages/Einstellungen.jsx'
 
 function Inhalt() {
   const loc = useLocation()
   // Bottom-Nav auf Editor-Seiten ausblenden (Platz für Tastatur)
-  const editor = /\/(neu|edit|eingabe)|\/aufgabe\/|\/notiz\/|\/inventur\/|\/ts-inventur\/|\/mitarbeiter\//.test(loc.pathname)
+  const editor = /\/(neu|edit|eingabe|report)|\/aufgabe\/|\/notiz\/|\/inventur\/|\/ts-inventur\/|\/mitarbeiter\//.test(loc.pathname)
   return (
     <>
       <Routes>
@@ -32,6 +33,7 @@ function Inhalt() {
         <Route path="/filiale/neu" element={<FilialeEdit />} />
         <Route path="/filiale/:id/edit" element={<FilialeEdit />} />
         <Route path="/filiale/:id/besuch" element={<Besuchsmodus />} />
+        <Route path="/filiale/:id/report" element={<Report />} />
         <Route path="/filiale/:id/:tab" element={<FilialeAkte />} />
         <Route path="/filiale/:id" element={<FilialeAkte />} />
         <Route path="/aufgaben" element={<Aufgaben />} />
