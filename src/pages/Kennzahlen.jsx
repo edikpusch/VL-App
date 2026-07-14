@@ -34,6 +34,7 @@ export default function Kennzahlen() {
         <div className="chip-row" style={{ marginBottom: 16 }}>
           <span className="chip active" onClick={() => nav('/wochenbericht/eingabe')}>+ Wochenbericht</span>
           <span className="chip active" onClick={() => nav('/personalkosten/eingabe')}>+ Personalkosten</span>
+          <span className="chip active" onClick={() => nav('/inventuren/eingabe')}>+ Inventuren</span>
         </div>
 
         {!hatWb && !hatPk && <Empty icon="📊" text="Noch keine Kennzahlen. Starte mit dem Wochenbericht." />}

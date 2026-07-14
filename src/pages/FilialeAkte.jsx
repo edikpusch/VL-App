@@ -330,7 +330,10 @@ function TabInventuren({ data, filiale, nav }) {
         </div>
       )}
 
-      <div className="section-title">Inventurdifferenz je Bereich</div>
+      <div className="section-title">
+        <span>Inventurdifferenz je Bereich</span>
+        <button className="btn small secondary" onClick={() => nav('/inventuren/eingabe')}>⚡ Alle Filialen</button>
+      </div>
       {BEREICHE.some((b) => verlauf[b].length >= 2) && (
         <>
           <div className="section-title" style={{ marginTop: 4 }}>Verlauf (Differenz %)</div>

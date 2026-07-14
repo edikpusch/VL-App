@@ -85,6 +85,10 @@ src/
 - Smart-Eingabe: `focusNextOnEnter` (Ui.jsx) + enterKeyHint="next" auf allen Zahlenfeldern; WochenberichtFlow: Kern-Steps 1–3 (Umsatz/Stunden/Kassier, „Speichern ohne Details" auf Step 3), O&G+SB und BO optional; berechnete Felder je Step im einklappbaren <Berechnet>-Block (auto-offen wenn manuell überschrieben).
 - Vorschlags-Gedächtnis: data.vorschlaege {artikel[{name,bereich}], massnahmen[], aufgaben[]}, lernt via `lerneVorschlag()` bei jedem Speichern (Flops, Verlustbringer, Maßnahmen, Aufgaben-Titel); Anzeige über <VorschlagListen data> (datalists dl-artikel/dl-massnahmen/dl-aufgaben) + input list="…"; Pflege (einzeln löschen) in Einstellungen.
 
+## Inventur-Schnellerfassung & Filial-Ziele (14.07.2026)
+- InventurenEingabe.jsx (`/inventuren/eingabe`): EIN Bereich (O&G/Bake-Off/SB/Mopro — Trocken läuft über TS-Inventur) + Datum → alle Filialen untereinander (Diff € / Diff % / VJ %). Upsert je Filiale+Bereich+Monat (bestehender Eintrag behält id/Verlustbringer/Notizen), leere Filialen übersprungen, Historie nur bei Neuanlage. Einzelmaske InventurEdit bleibt für Details.
+- Ziele NUR pro Filiale: `zieleFuer()` liest ausschließlich zieleProFiliale (kein Bezirks-Fallback mehr!); fehlender Wert = Ampel-Prüfung setzt aus. `zieleDurchschnitt()` = Ø der gepflegten Filialwerte, nur Anzeige (Einstellungen-Kopfkarte + Platzhalter „Ø x"). einstellungen.ziele bleibt nur für Alt-Backups im Schema, wird ignoriert. Neue Filialen starten ohne Ziele (bewusst entschieden).
+
 ## UX-Muster (13.07.2026 aus Praxistest)
 - Abschriften-Tab: Karte antippen klappt Verlustartikel der KW auf
 - Filial-Aufgaben: Ansicht „Diese Woche" (fällig ≤ Sonntag) + „Erledigt"-Seite; spätere Fälligkeiten (inkl. nächster Instanz wiederkehrender Aufgaben) eingeklappt unter „Später fällig"

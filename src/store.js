@@ -235,15 +235,31 @@ export function addHistorie(data, filialeId, text, typ = 'auto') {
   f.historie.unshift({ id: uid(), datum: todayISO(), typ, text })
 }
 
-// ─── Ziele je Filiale (mit Bezirks-Fallback) ─────────────────────────
+// ─── Ziele: NUR pro Filiale gepflegt (kein Bezirks-Standard) ─────────
+// Fehlender Wert = kein Ziel → betroffene Ampel-Prüfung setzt aus.
+// (einstellungen.ziele bleibt nur für Alt-Backups im Schema, wird ignoriert.)
 
 export function zieleFuer(data, filialeId) {
-  const basis = data.einstellungen.ziele
-  const ovr = data.einstellungen.zieleProFiliale?.[filialeId] || {}
+  const z = data.einstellungen.zieleProFiliale?.[filialeId] || {}
   return {
-    kassierleistung: ovr.kassierleistung ?? basis.kassierleistung,
-    personalkosten: ovr.personalkosten ?? basis.personalkosten,
-    inventurDiff: { ...basis.inventurDiff, ...(ovr.inventurDiff || {}) },
+    kassierleistung: z.kassierleistung,
+    personalkosten: z.personalkosten,
+    inventurDiff: { ...(z.inventurDiff || {}) },
+  }
+}
+
+// Bezirks-Durchschnitt (nur Anzeige) — Mittelwert der gepflegten Filialwerte
+export function zieleDurchschnitt(data) {
+  const zpf = data.einstellungen.zieleProFiliale || {}
+  const ids = data.filialen.map((f) => f.id)
+  const avg = (werte) => {
+    const v = werte.filter((x) => typeof x === 'number' && !isNaN(x))
+    return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 100) / 100 : null
+  }
+  return {
+    kassierleistung: avg(ids.map((id) => zpf[id]?.kassierleistung)),
+    personalkosten: avg(ids.map((id) => zpf[id]?.personalkosten)),
+    inventurDiff: Object.fromEntries(BEREICHE.map((b) => [b, avg(ids.map((id) => zpf[id]?.inventurDiff?.[b]))])),
   }
 }
 

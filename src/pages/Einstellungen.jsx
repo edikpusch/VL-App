@@ -1,59 +1,45 @@
 import { useRef, useState } from 'react'
 import { useData } from '../useData.js'
-import { BEREICHE, sha256, save, load, num, normNum, todayISO } from '../store.js'
+import { BEREICHE, sha256, save, load, num, normNum, todayISO, zieleDurchschnitt } from '../store.js'
 import { Header } from '../components/Ui.jsx'
 
-// Einstellungen: Ziele auf Bezirks- UND Filialebene.
-// Filial-Ziel leer = erbt den Bezirks-Standard (Platzhalter zeigt ihn an).
+// Einstellungen: Ziele werden NUR pro Filiale gepflegt.
+// Der Bezirkswert ist ein angezeigter Durchschnitt (Ø) der Filialziele.
 export default function Einstellungen() {
   const [data, update] = useData()
   const fileRef = useRef(null)
   const [katInput, setKatInput] = useState('')
-  const [scope, setScope] = useState('') // '' = Bezirks-Standard, sonst filialeId
+  const [scope, setScope] = useState(() => data.filialen[0]?.id || '')
 
-  const basis = data.einstellungen.ziele
-  const filiale = scope ? data.filialen.find((f) => f.id === scope) : null
-  const ovr = scope ? (data.einstellungen.zieleProFiliale?.[scope] || {}) : null
+  const filiale = data.filialen.find((f) => f.id === scope)
+  const ovr = data.einstellungen.zieleProFiliale?.[scope] || {}
+  const avg = zieleDurchschnitt(data)
 
-  // ── Ziel speichern (Bezirk oder Filial-Override) ──
+  // ── Filial-Ziel speichern (leer = kein Ziel, Prüfung setzt aus) ──
   const setZiel = (pfad, val) => {
+    if (!scope) return
     const n = val === '' ? '' : num(val)
     update((d) => {
-      if (!scope) {
-        // Bezirks-Standard
-        if (pfad.startsWith('inv:')) d.einstellungen.ziele.inventurDiff[pfad.slice(4)] = n
-        else d.einstellungen.ziele[pfad] = n
+      const zpf = (d.einstellungen.zieleProFiliale ||= {})
+      const z = (zpf[scope] ||= {})
+      if (pfad.startsWith('inv:')) {
+        const inv = (z.inventurDiff ||= {})
+        if (n === '' || isNaN(n)) delete inv[pfad.slice(4)]
+        else inv[pfad.slice(4)] = n
+        if (Object.keys(inv).length === 0) delete z.inventurDiff
       } else {
-        // Filial-Override: leer = löschen (erbt wieder)
-        const zpf = (d.einstellungen.zieleProFiliale ||= {})
-        const z = (zpf[scope] ||= {})
-        if (pfad.startsWith('inv:')) {
-          const inv = (z.inventurDiff ||= {})
-          if (n === '' || isNaN(n)) delete inv[pfad.slice(4)]
-          else inv[pfad.slice(4)] = n
-          if (Object.keys(inv).length === 0) delete z.inventurDiff
-        } else {
-          if (n === '' || isNaN(n)) delete z[pfad]
-          else z[pfad] = n
-        }
-        if (Object.keys(z).length === 0) delete zpf[scope]
+        if (n === '' || isNaN(n)) delete z[pfad]
+        else z[pfad] = n
       }
+      if (Object.keys(z).length === 0) delete zpf[scope]
     })
   }
 
   const wert = (pfad) => {
-    if (!scope) {
-      const v = pfad.startsWith('inv:') ? basis.inventurDiff[pfad.slice(4)] : basis[pfad]
-      return v === '' || v == null ? '' : String(v).replace('.', ',')
-    }
     const v = pfad.startsWith('inv:') ? ovr.inventurDiff?.[pfad.slice(4)] : ovr[pfad]
     return v === '' || v == null ? '' : String(v).replace('.', ',')
   }
-  const platzhalter = (pfad) => {
-    if (!scope) return ''
-    const v = pfad.startsWith('inv:') ? basis.inventurDiff[pfad.slice(4)] : basis[pfad]
-    return v === '' || v == null ? '' : 'Bezirk: ' + String(v).replace('.', ',')
-  }
+  const oe = (v) => (v == null ? '–' : String(v).replace('.', ','))
 
   const hatOverrides = (fid) => {
     const z = data.einstellungen.zieleProFiliale?.[fid]
@@ -124,55 +110,66 @@ export default function Einstellungen() {
     <>
       <Header title="Einstellungen" backTo={null} />
       <div className="page">
-        {/* ── Ziele: Bezirk / pro Filiale ── */}
-        <div className="section-title">🎯 Zielvorgaben</div>
+        {/* ── Ziele: nur pro Filiale, Ø Bezirk als Anzeige ── */}
+        <div className="section-title">🎯 Zielvorgaben (pro Filiale)</div>
+
+        <div className="card" style={{ padding: '10px 14px' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 6 }}>Ø Bezirk (berechnet aus den Filialzielen)</div>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 13.5 }}>
+            <span>KL: <b>{oe(avg.kassierleistung)}</b></span>
+            <span>PK: <b>{oe(avg.personalkosten)} %</b></span>
+            {BEREICHE.map((b) => (
+              <span key={b}>{b}: <b>{oe(avg.inventurDiff[b])} %</b></span>
+            ))}
+          </div>
+        </div>
+
         <div className="chip-row" style={{ marginBottom: 10 }}>
-          <span className={'chip' + (!scope ? ' active' : '')} onClick={() => setScope('')}>Bezirks-Standard</span>
           {data.filialen.map((f) => (
             <span key={f.id} className={'chip' + (scope === f.id ? ' active' : '')} onClick={() => setScope(f.id)}>
               {f.name}{hatOverrides(f.id) ? ' •' : ''}
             </span>
           ))}
+          {data.filialen.length === 0 && <span style={{ color: 'var(--muted)', fontSize: 14 }}>Erst Filialen anlegen.</span>}
         </div>
 
-        <div className="card" key={scope}>
-          {scope && (
+        {filiale && (
+          <div className="card" key={scope}>
             <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-              Abweichende Ziele nur für <b style={{ color: 'var(--text)' }}>{filiale?.name}</b>.
-              Leere Felder erben den Bezirks-Standard.
+              Ziele für <b style={{ color: 'var(--text)' }}>{filiale.name}</b>. Leeres Feld = kein Ziel (Ampel-Prüfung setzt aus).
             </div>
-          )}
-          <div className="row2" style={{ marginBottom: 10 }}>
-            <div>
-              <label style={lbl}>Kassierleistung (Pos./Min)</label>
-              <input style={inp} inputMode="decimal" defaultValue={wert('kassierleistung')} placeholder={platzhalter('kassierleistung')}
-                onBlur={(e) => setZiel('kassierleistung', normNum(e.target.value))} />
+            <div className="row2" style={{ marginBottom: 10 }}>
+              <div>
+                <label style={lbl}>Kassierleistung (Pos./Min)</label>
+                <input style={inp} inputMode="decimal" defaultValue={wert('kassierleistung')} placeholder={avg.kassierleistung != null ? 'Ø ' + oe(avg.kassierleistung) : ''}
+                  onBlur={(e) => setZiel('kassierleistung', normNum(e.target.value))} />
+              </div>
+              <div>
+                <label style={lbl}>Personalkosten (%)</label>
+                <input style={inp} inputMode="decimal" defaultValue={wert('personalkosten')} placeholder={avg.personalkosten != null ? 'Ø ' + oe(avg.personalkosten) : ''}
+                  onBlur={(e) => setZiel('personalkosten', normNum(e.target.value))} />
+              </div>
             </div>
-            <div>
-              <label style={lbl}>Personalkosten (%)</label>
-              <input style={inp} inputMode="decimal" defaultValue={wert('personalkosten')} placeholder={platzhalter('personalkosten')}
-                onBlur={(e) => setZiel('personalkosten', normNum(e.target.value))} />
+            <label style={{ ...lbl, marginTop: 6 }}>Inventurdifferenz-Ziel je Bereich (%)</label>
+            {BEREICHE.map((b) => (
+              <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
+                <span style={{ flex: 1, fontSize: 14.5 }}>{b}</span>
+                <input style={{ ...inp, width: 110 }} inputMode="decimal" defaultValue={wert('inv:' + b)} placeholder={avg.inventurDiff[b] != null ? 'Ø ' + oe(avg.inventurDiff[b]) : ''}
+                  onBlur={(e) => setZiel('inv:' + b, normNum(e.target.value))} />
+              </div>
+            ))}
+            {hatOverrides(scope) && (
+              <button className="btn small danger" style={{ marginTop: 8 }}
+                onClick={() => { if (confirm('Alle Ziele für ' + filiale.name + ' löschen?')) update((d) => { delete d.einstellungen.zieleProFiliale[scope] }) }}>
+                Filial-Ziele löschen
+              </button>
+            )}
+            <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 8 }}>
+              Ampel: Gelb ab Ziel überschritten, Rot ab Ziel × 1,5 (Inventur).
+              Abschriften werden gegen Vorjahr und Vorwoche bewertet (kein fester Zielwert). Werte gelten nach Verlassen des Feldes.
             </div>
           </div>
-          <label style={{ ...lbl, marginTop: 6 }}>Inventurdifferenz-Ziel je Bereich (%)</label>
-          {BEREICHE.map((b) => (
-            <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
-              <span style={{ flex: 1, fontSize: 14.5 }}>{b}</span>
-              <input style={{ ...inp, width: 110 }} inputMode="decimal" defaultValue={wert('inv:' + b)} placeholder={platzhalter('inv:' + b)}
-                onBlur={(e) => setZiel('inv:' + b, normNum(e.target.value))} />
-            </div>
-          ))}
-          {scope && hatOverrides(scope) && (
-            <button className="btn small danger" style={{ marginTop: 8 }}
-              onClick={() => { if (confirm('Alle abweichenden Ziele für ' + filiale?.name + ' zurücksetzen?')) update((d) => { delete d.einstellungen.zieleProFiliale[scope] }) }}>
-              Filial-Ziele zurücksetzen
-            </button>
-          )}
-          <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 8 }}>
-            Ampel: Gelb ab Ziel überschritten, Rot ab Ziel × 1,5 (Inventur) bzw. −10 % Kassierleistung / +0,3 pp Personalkosten.
-            Abschriften werden gegen Vorjahr und Vorwoche bewertet (kein fester Zielwert). Werte gelten nach Verlassen des Feldes.
-          </div>
-        </div>
+        )}
 
         {/* ── Kategorien ── */}
         <div className="section-title">🏷️ Aufgaben-Kategorien</div>

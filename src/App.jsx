@@ -16,6 +16,7 @@ import Kennzahlen from './pages/Kennzahlen.jsx'
 import AbschriftenEingabe from './pages/AbschriftenEingabe.jsx'
 import WochenberichtFlow from './pages/WochenberichtFlow.jsx'
 import PersonalkostenEingabe from './pages/PersonalkostenEingabe.jsx'
+import InventurenEingabe from './pages/InventurenEingabe.jsx'
 import TsInventurEdit from './pages/TsInventurEdit.jsx'
 import Besuchsmodus from './pages/Besuchsmodus.jsx'
 import Report from './pages/Report.jsx'
@@ -49,6 +50,7 @@ function Inhalt() {
         <Route path="/abschriften/eingabe" element={<AbschriftenEingabe />} />
         <Route path="/wochenbericht/eingabe" element={<WochenberichtFlow />} />
         <Route path="/personalkosten/eingabe" element={<PersonalkostenEingabe />} />
+        <Route path="/inventuren/eingabe" element={<InventurenEingabe />} />
         <Route path="/ts-inventur/neu" element={<TsInventurEdit />} />
         <Route path="/ts-inventur/:id" element={<TsInventurEdit />} />
         <Route path="/befristungen" element={<Befristungen />} />
